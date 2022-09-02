@@ -3,7 +3,7 @@ name = "O365-jira-connect"
 version = "0.1.0"
 description = "An integration service to connect O365 & Jira."
 authors = ["Renato Damas <rena2damas@gmail.com>"]
-license = "LICENSE"
+license = "MIT"
 readme = "README.rst"
 homepage = ""
 repository = "https://github.com/rena2damas/O365-jira-connect"
@@ -26,6 +26,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 click = "^8.1.3"
+environs = "^9.5.0"
 jira = "^3.4.0"
 O365 = "^2.0.19"
 O365-notifications = "^0.1.1"
