@@ -28,7 +28,7 @@ classifiers = [
 click = "^8.1.3"
 environs = "^9.5.0"
 jira = "^3.4.0"
-O365 = "^2.0.19"
+O365 = "^2.0.20"
 O365-notifications = "^0.1.1"
 python = "^3.9"
 
