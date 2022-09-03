@@ -1,72 +1,53 @@
 import logging
 
 import click
+import dotenv
 from O365 import (
     Account,
     MSGraphProtocol,
     MSOffice365Protocol,
 )
 
+from O365_jira_connect.components import init_engine
 from O365_jira_connect.components.token import DatabaseTokenBackend
 
 logger = logging.getLogger(__name__)
 
-
-def authorize_account(
-    protocol,
-    api_version,
-    principal,
-    tenant_id,
-    client_id,
-    client_secret,
-    grant_type,
-    scopes,
-    retries,
-):
-    if protocol == "graph":
-        protocol = MSGraphProtocol(api_version=api_version)
-    if protocol == "office":
-        protocol = MSOffice365Protocol(api_version=api_version)
-    else:
-        raise ValueError
-
-    account = Account(
-        credentials=(client_id, client_secret),
-        protocol=protocol,
-        tenant_id=tenant_id,
-        main_resource=principal,
-        auth_flow_type=grant_type,
-        scopes=scopes,
-        request_retries=retries,
-        token_backend=DatabaseTokenBackend(),
-    )
-
-    if account.is_authenticated:
-        logger.info("Account already authorized.")
-    else:
-        logger.info("Authorizing account ...")
-        account.authenticate(tenant_id=tenant_id)
-        logger.info("Authorization done.")
-    return account
+# load environment if exists
+dotenv.load_dotenv(".env")
 
 
-@click.group(name="O365_connect")
-def cli():
-    pass
+@click.option(
+    "--database",
+    "-d",
+    required=True,
+    type=str,
+    envvar="SQLALCHEMY_DATABASE_URI",
+    show_envvar=True,
+    help="the database URI used to store information on issues",
+)
+@click.option("--debug/--no-debug", default=False, help="Enable debug")
+@click.group(context_settings={"help_option_names": ["-h", "--help"]})
+def cli(debug, database):
+    init_engine(engine_url=database, debug=debug)
+    if debug:
+        click.echo(f"Debug mode is enabled")
 
 
-@click.command()
+@cli.command()
 @click.option(
     "--protocol",
     required=False,
     type=click.Choice(["graph", "office"]),
     default="graph",
     show_default=True,
+    help="the O365 protocol",
 )
 @click.option(
     "--api-version",
     required=False,
     type=str,
+    help="the O365 API version",
 )
 @click.option(
     "--principal",
@@ -112,6 +93,7 @@ def cli():
 @click.option(
     "--scopes",
     required=False,
+    type=str,
     multiple=True,
     default=[],
     envvar="O365_SCOPES",
@@ -125,7 +107,6 @@ def cli():
     default=0,
     help="number of retries when request fails",
 )
-@click.option("--debug/--no-debug", default=False)
 def authorize(
     protocol,
     api_version,
@@ -136,7 +117,6 @@ def authorize(
     grant_type,
     scopes,
     retries,
-    debug,
 ):
     """Grant service authorization to O365 resources."""
     return authorize_account(
@@ -150,3 +130,46 @@ def authorize(
         scopes=scopes,
         retries=retries,
     )
+
+
+def authorize_account(
+    protocol,
+    api_version,
+    principal,
+    tenant_id,
+    client_id,
+    client_secret,
+    grant_type,
+    scopes,
+    retries,
+):
+    kwargs = {"api_version": api_version} if api_version else {}
+    if protocol == "graph":
+        protocol = MSGraphProtocol(**kwargs)
+    elif protocol == "office":
+        protocol = MSOffice365Protocol(**kwargs)
+    else:
+        raise ValueError
+
+    # ignore scopes on 'credentials' flow
+    if scopes and grant_type == "credentials":
+        scopes = None
+
+    account = Account(
+        credentials=(client_id, client_secret),
+        protocol=protocol,
+        tenant_id=tenant_id,
+        main_resource=principal,
+        auth_flow_type=grant_type,
+        scopes=scopes,
+        request_retries=retries,
+        token_backend=DatabaseTokenBackend(),
+    )
+
+    if account.is_authenticated:
+        logger.info("Account already authorized.")
+    else:
+        logger.info("Authorizing account ...")
+        account.authenticate(tenant_id=tenant_id)
+        logger.info("Authorization done.")
+    return account
