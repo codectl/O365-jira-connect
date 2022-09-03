@@ -29,9 +29,10 @@ dotenv.load_dotenv(".env")
 @click.option("--debug/--no-debug", default=False, help="Enable debug")
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 def cli(debug, database):
-    init_engine(engine_url=database, debug=debug)
     if debug:
         click.echo(f"Debug mode is enabled")
+        logger.setLevel(logging.DEBUG)
+    init_engine(engine_url=database, debug=debug)
 
 
 @cli.command()
