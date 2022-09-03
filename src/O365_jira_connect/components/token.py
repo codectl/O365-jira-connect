@@ -3,7 +3,7 @@ import typing
 
 from O365.utils import BaseTokenBackend
 
-from O365_jira_connect.components import db
+from O365_jira_connect.components import with_session
 from O365_jira_connect.components.models import AccessToken
 
 logger = logging.getLogger(__name__)
@@ -47,45 +47,51 @@ class DatabaseTokenBackend(BaseTokenBackend):
 
 
 class TokenSvc:
+
     @staticmethod
-    def create(**kwargs) -> AccessToken:
+    @with_session
+    def create(session=None, **kwargs) -> AccessToken:
         token = AccessToken(**kwargs)
 
-        db.session.add(token)
-        db.session.commit()
+        session.add(token)
+        session.commit()
 
         logger.debug(f"Created token '{token.access_token}'.")
 
         return token
 
     @staticmethod
-    def get(token_id) -> typing.Optional[AccessToken]:
-        return AccessToken.query.get(token_id)
+    @with_session
+    def get(token_id, session=None) -> typing.Optional[AccessToken]:
+        return session.query(AccessToken).get(token_id)
 
     @staticmethod
+    @with_session
     def find_by(
-        one=False, **filters
+        one=False, session=None, **filters
     ) -> typing.Union[list[AccessToken], typing.Optional[AccessToken]]:
-        query = AccessToken.query.filter_by(**filters)
+        query = session.query(AccessToken).filter_by(**filters)
         return query.all() if not one else query.one_or_none()
 
     @classmethod
-    def update(cls, token_id, **kwargs):
+    @with_session
+    def update(cls, token_id, session=None, **kwargs):
         token = cls.get(token_id=token_id)
         for key, value in kwargs.items():
             if hasattr(token, key):
                 setattr(token, key, value)
-        db.session.commit()
+        session.commit()
 
         access_token = token.access_token
         msg = f"Updated token '{access_token}' with the attributes: '{kwargs}'."
         logger.info(msg)
 
     @classmethod
-    def delete(cls, token_id):
+    @with_session
+    def delete(cls, token_id, session=None):
         token = cls.get(token_id=token_id)
         if token:
-            db.session.delete(token)
-            db.session.commit()
+            session.delete(token)
+            session.commit()
 
             logger.debug(f"Deleted token '{token.access_token}'.")

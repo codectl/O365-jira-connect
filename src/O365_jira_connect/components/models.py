@@ -1,35 +1,37 @@
 import datetime
 
-from O365_jira_connect.components import db
+from sqlalchemy import ARRAY, Column, DateTime, Float, Integer, String
+
+from O365_jira_connect.components import Base
 
 
-class AccessToken(db.Model):
+class AccessToken(Base):
     __tablename__ = "access_tokens"
 
-    id = db.Column(db.Integer, primary_key=True)
-    token_type = db.Column(db.String, nullable=False)
-    scope = db.ARRAY(db.String())
-    access_token = db.Column(db.String, nullable=False, unique=True)
-    refresh_token = db.Column(db.String, nullable=False, unique=True)
-    expires_in = db.Column(db.Integer, nullable=False)
-    ext_expires_in = db.Column(db.Integer, nullable=False)
-    expires_at = db.Column(db.Float, nullable=False)
+    id = Column(Integer, primary_key=True)
+    token_type = Column(String, nullable=False)
+    scope = ARRAY(String())
+    access_token = Column(String, nullable=False, unique=True)
+    refresh_token = Column(String, nullable=True, unique=True)
+    expires_in = Column(Integer, nullable=False)
+    ext_expires_in = Column(Integer, nullable=False)
+    expires_at = Column(Float, nullable=False)
 
     def __str__(self):
         return f"<AccessToken '{self.id}'>"
 
 
-class Issue(db.Model):
+class Issue(Base):
     __tablename__ = "issues"
 
-    id = db.Column(db.Integer, primary_key=True)
-    key = db.Column(db.String, unique=True, nullable=False, index=True)
-    outlook_message_id = db.Column(db.String, unique=True)
-    outlook_conversation_id = db.Column(db.String, unique=True)
-    outlook_messages_id = db.Column(db.String)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-    reporter = db.Column(db.String, nullable=False)
+    id = Column(Integer, primary_key=True)
+    key = Column(String, unique=True, nullable=False, index=True)
+    outlook_message_id = Column(String, unique=True)
+    outlook_conversation_id = Column(String, unique=True)
+    outlook_messages_id = Column(String)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow)
+    reporter = Column(String, nullable=False)
 
     def __str__(self):
         return f"<Issue '{self.key}'>"
