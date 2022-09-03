@@ -37,6 +37,9 @@ coverage = "^6.4.4"
 pre-commit = "^2.20.0"
 pytest = "^7.1.2"
 
+[tool.poetry.scripts]
+O365-connect = "O365_jira_connect:cli"
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
