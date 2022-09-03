@@ -56,6 +56,7 @@ A possible configuration is:
 .. code-block:: bash
 
     # O365 settings
+    O365_ID_PROVIDER=https://login.microsoftonline.com
     O365_PRINCIPAL=mailbox@example.com
     O365_TENANT_ID=...
     O365_CLIENT_ID=...
@@ -67,9 +68,7 @@ A possible configuration is:
     JIRA_PLATFORM_USER=me@example.com
     JIRA_PLATFORM_TOKEN=...
     JIRA_ISSUE_TYPE=Task
-    JIRA_ISSUE_LABELS=ticket
-    JIRA_ISSUE_LABEL_CATEGORIES=general,bug
-    JIRA_ISSUE_LABEL_DEFAULT_CATEGORY=general
+    JIRA_ISSUE_DEFAULT_LABELS=support,tasks
 
     # Jira supported boards
     JIRA_SUPPORT_BOARD=support
