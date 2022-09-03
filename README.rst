@@ -55,6 +55,9 @@ A possible configuration is:
 
 .. code-block:: bash
 
+    # database URI
+    SQLALCHEMY_DATABASE_URI=sqlite:///issues.db
+
     # O365 settings
     O365_ID_PROVIDER=https://login.microsoftonline.com
     O365_PRINCIPAL=mailbox@example.com
