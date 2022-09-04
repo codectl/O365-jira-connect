@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseTokenBackend(BaseTokenBackend):
-
     def __init__(self):
         super().__init__()
         self.svc = TokenSvc()
@@ -47,7 +46,6 @@ class DatabaseTokenBackend(BaseTokenBackend):
 
 
 class TokenSvc:
-
     @staticmethod
     @with_session
     def create(session=None, **kwargs) -> AccessToken:
