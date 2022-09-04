@@ -79,8 +79,8 @@ A possible configuration is:
     JIRA_DEFAULT_BOARD=JIRA_SUPPORT_BOARD
 
     # filter settings
-    EMAIL_WHITELISTED_DOMAINS=example.com
-    EMAIL_BLACKLIST=malicious@example.com
+    JIRA_WHITELIST=example.com
+    JIRA_BLACKLIST=malicious@example.com
 
 O365 Auth
 ^^^^^^^^^
