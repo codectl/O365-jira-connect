@@ -1,18 +1,22 @@
 import datetime
 import itertools
 import json
+import logging
 
 import mistune
 import O365
 import O365.mailbox
-from flask import current_app
 
 from O365_notifications.base import O365Notification, O365NotificationHandler
 from O365_notifications.constants import O365EventType, O365Namespace
 
-from src.models.ticket import Ticket
-from src.services.O365.filters.base import OutlookMessageFilter
-from src.services.ticket import TicketSvc
+from O365_jira_connect.filters.base import OutlookMessageFilter
+from O365_jira_connect.models import Issue
+from O365_jira_connect.services import IssueSvc
+
+__all__ = ("JiraNotificationHandler",)
+
+logger = logging.getLogger(__name__)
 
 
 class JiraNotificationHandler(O365NotificationHandler):
@@ -21,15 +25,17 @@ class JiraNotificationHandler(O365NotificationHandler):
         parent: O365.utils.ApiComponent,
         namespace: O365Namespace,
         filters: list[OutlookMessageFilter] = (),
+        configs: dict = None,
     ):
         self.parent = parent
         self.namespace = namespace
         self.filters = filters
+        self.configs = configs
 
     def process(self, notification: O365Notification):
         """A handler that deals with email notifications.
 
-        When the notification is of type Message, create a new Jira ticket. And this
+        When the notification is of type Message, create a new Jira issue. And this
         is currently the only type supported atm.
         """
 
@@ -38,9 +44,9 @@ class JiraNotificationHandler(O365NotificationHandler):
 
             # log 'Missed' notifications
             if notification.event == O365EventType.MISSED:
-                current_app.logger.warning(f"Notification missed: {vars(notification)}")
+                logger.warning(f"Notification missed: {vars(notification)}")
 
-            # create Jira ticket for 'Message' notifications
+            # create Jira issue for 'Message' notifications
             elif (
                 notification.resource.type
                 == self.namespace.O365ResourceDataType.MESSAGE
@@ -48,8 +54,8 @@ class JiraNotificationHandler(O365NotificationHandler):
                 self.process_message(message_id=notification.resource.id)
 
     def process_message(self, message_id):
-        """Process a message and create/update a ticket."""
-        svc = TicketSvc()
+        """Process a message and create/update an issue."""
+        svc = IssueSvc()
 
         message = self.get_message(message_id, parent=self.parent)
 
@@ -58,8 +64,8 @@ class JiraNotificationHandler(O365NotificationHandler):
         bccs = (e.address for e in message.bcc)
         emails = list(itertools.chain(ccs, bccs))
 
-        current_app.logger.info("\n*** Processing new message ***")
-        current_app.logger.info(
+        logger.info("\n*** Processing new message ***")
+        logger.info(
             json.dumps(
                 {
                     "outlook id": message.object_id,
@@ -73,27 +79,27 @@ class JiraNotificationHandler(O365NotificationHandler):
 
         # skip message processing if message is filtered
         if any(not e for e in list(map(lambda f: f.apply(message), self.filters))):
-            current_app.logger.info(f"Message '{message.subject}' filtered.")
+            logger.info(f"Message '{message.subject}' filtered.")
             return
 
-        # check for local existing ticket
-        existing_ticket = svc.find_one(
+        # check for local existing issue
+        existing_issue = svc.find_one(
             outlook_conversation_id=message.conversation_id, _model=True
         )
 
-        # add new comment if ticket already exists.
-        # create new ticket otherwise.
-        if existing_ticket:
+        # add new comment if issue already exists.
+        # create new issue otherwise.
+        if existing_issue:
 
-            # delete local reference if ticket no longer exists in Jira
-            exists = next(iter(svc.find_by(key=existing_ticket.key, limit=1)), None)
+            # delete local reference if issue no longer exists in Jira
+            exists = next(iter(svc.find_by(key=existing_issue.key, limit=1)), None)
             if not exists:
-                svc.delete(ticket_id=existing_ticket.id)
+                svc.delete(issue_id=existing_issue.id)
 
             # only add comment if not added yet
-            if message.object_id not in existing_ticket.outlook_messages_id:
+            if message.object_id not in existing_issue.outlook_messages_id:
                 svc.create_comment(
-                    issue=existing_ticket,
+                    issue=existing_issue,
                     author=message.sender.address,
                     body=O365.message.bs(message.unique_body, "html.parser").body.text,
                     watchers=emails,
@@ -101,17 +107,17 @@ class JiraNotificationHandler(O365NotificationHandler):
                 )
 
                 # append message to history
-                self.add_message_to_history(message, existing_ticket)
+                self.add_message_to_history(message, existing_issue)
 
-                msg = f"New comment added on ticket '{existing_ticket.key}'."
+                logger.info(f"New comment added on issue '{existing_issue.key}'.")
             else:
-                key = existing_ticket.key
-                msg = f"Comment on ticket '{key}' has already been added."
-            current_app.logger.info(msg)
+                key = existing_issue.key
+                logger.info(f"Comment on issue '{key}' has already been added.")
         else:
 
-            # create ticket in Jira and keep local reference
+            # create issue in Jira and keep local reference
             issue = svc.create(
+                configs=self.configs,
                 # Jira fields
                 title=message.subject,
                 body=O365.message.bs(message.unique_body, "html.parser").body.text,
@@ -127,16 +133,16 @@ class JiraNotificationHandler(O365NotificationHandler):
                 outlook_messages_id=message.object_id,
             )
 
-            # get local ticket reference
+            # get local issue reference
             model = svc.find_one(key=issue["key"], _model=True)
 
-            # notify ticket reporter about created ticket
-            notification = self.notify_reporter(message=message, ticket_key=model.key)
+            # notify issue reporter about created issue
+            notification = self.notify_reporter(message=message, issue_key=model.key)
 
             # append message to history
             self.add_message_to_history(message=notification, model=model)
 
-            current_app.logger.info(f"New ticket created with Jira key '{model.key}'.")
+            logger.info(f"New issue created with Jira key '{model.key}'.")
 
     @staticmethod
     def get_message(message_id, parent: O365.utils.ApiComponent):
@@ -170,32 +176,31 @@ class JiraNotificationHandler(O365NotificationHandler):
         )
 
     @classmethod
-    def notify_reporter(cls, *, message: O365.Message, ticket_key: str):
+    def notify_reporter(cls, *, message: O365.Message, issue_key: str):
         # creating notification message to be sent to all recipients
         markdown = mistune.create_markdown(escape=False)
         body = markdown(
-            TicketSvc.create_message_body(
+            IssueSvc.create_message_body(
                 template="notification.j2",
                 values={
                     "summary": message.subject,
-                    "key": ticket_key,
-                    "url": current_app.config["TICKET_CLIENT_APP"],
+                    "key": issue_key,
                 },
             )
         )
 
-        metadata = {"name": "message", "content": "jira ticket notification"}
+        metadata = {"name": "message", "content": "jira issue notification"}
         reply = cls.create_reply(message, values={"body": body, "metadata": [metadata]})
         reply.send()
         return reply
 
     @staticmethod
-    def add_message_to_history(message: O365.Message, model: Ticket):
-        """Add a message to the ticket history."""
+    def add_message_to_history(message: O365.Message, model: Issue):
+        """Add a message to the issue history."""
         messages_id = model.outlook_messages_id.split(",")
         if message.object_id not in messages_id:
-            TicketSvc.update(
-                ticket_id=model.id,
+            IssueSvc.update(
+                issue_id=model.id,
                 outlook_messages_id=",".join(messages_id + [message.object_id]),
                 updated_at=datetime.datetime.utcnow(),
             )
@@ -218,7 +223,7 @@ class JiraNotificationHandler(O365NotificationHandler):
             reply_body = "\n".join(reply.body.splitlines()[2:])
             style = ""
 
-        body = TicketSvc.create_message_body(
+        body = IssueSvc.create_message_body(
             template="reply.j2", values={"reply": reply_body, "style": style, **values}
         )
 
