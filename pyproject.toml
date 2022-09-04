@@ -27,6 +27,7 @@ classifiers = [
 [tool.poetry.dependencies]
 click = "^8.1.3"
 jira = "^3.4.0"
+mistune = "^2.0.4"
 O365 = "^2.0.20"
 O365-notifications = "^0.1.1"
 python = "^3.9"
