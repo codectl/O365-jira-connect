@@ -58,7 +58,6 @@ def issue_type(app, svc, request):
 
 @pytest.mark.usefixtures("svc", "project", "issue_type")
 class JiraTestCase(unittest.TestCase):
-
     def setUp(self):
         self.board = next(self.svc.boards())
 
