@@ -1,6 +1,8 @@
 import base64
 import functools
 import io
+import logging
+import os
 import re
 import tempfile
 import typing
@@ -9,14 +11,285 @@ import jira.resources
 import O365
 import requests
 import werkzeug.datastructures
-from flask import current_app
 from jira import JIRA
 
 from src.models.jira import Board
-from src.models.ticket import Ticket
-from src.settings.env import env
+from O365_jira_connect.components import with_session
+from O365_jira_connect.models import Issue
 
-__all__ = ("JiraSvc",)
+__all__ = ("IssueSvc", "JiraSvc")
+
+logger = logging.getLogger(__name__)
+
+
+class IssueSvc:
+    @classmethod
+    @with_session
+    def create(
+        cls, session=None, configs=None, attachments: list = None, **kwargs
+    ) -> Issue:
+        """Create a new issue by calling Jira API to create a new
+        issue. A new local reference to the issue is also created.
+
+        :param session: injected ORM session
+        :param configs: config settings
+        :param attachments: the files to attach to the issue which
+                            are stored in Jira
+        :param kwargs: properties of the issue
+            title: title of the issue
+            description: body of the issue
+            reporter: email of the author's issue
+            board: board key which the issue belongs to
+            labels: which labels assign to issue
+            priority: severity of the issue
+            watchers: user emails to watch for issue changes
+        """
+        svc = JiraSvc()
+
+        # translate emails into jira.User objects
+        reporter = cls.resolve_email(email=kwargs.get("reporter"))
+        watchers = [
+            cls.resolve_email(email, default=email)
+            for email in kwargs.get("watchers") or []
+        ]
+
+        # create issue body with Jira markdown format
+        body = cls.create_message_body(
+            template="jira.j2",
+            values={
+                "author": svc.markdown.mention(user=reporter or kwargs.get("reporter")),
+                "cc": " ".join(svc.markdown.mention(user=w) for w in watchers),
+                "body": kwargs.get("body"),
+            },
+        )
+
+        # if reporter is not a Jira account, reporter is set to 'Anonymous'
+        reporter_id = getattr(reporter, "accountId", None)
+
+        # set defaults
+        board = next(b for b in svc.boards() if b.key == kwargs.get("board"))
+        priority_opt = ["high", "low"]
+        priority = (kwargs.get("priority") or "").lower()
+        priority = {"name": priority.capitalize()} if priority in priority_opt else None
+        labels = kwargs.get("labels", []) + configs["JIRA_ISSUE_DEFAULT_LABELS"]
+
+        # create ticket in Jira
+        issue = svc.create_issue(
+            summary=kwargs.get("title"),
+            description=body,
+            reporter={"id": reporter_id},
+            project={"key": board.project},
+            issuetype={"name": configs["JIRA_ISSUE_TYPE"]},
+            labels=labels,
+            **{"priority": priority} if priority else {},
+        )
+
+        # add watchers
+        svc.add_watchers(issue=issue, watchers=watchers)
+
+        # adding attachments
+        for attachment in attachments or []:
+            svc.add_attachment(issue=issue, attachment=attachment)
+
+        # add new entry to the db
+        local_fields = {k: v for k, v in kwargs.items() if k in Issue.__dict__}
+        issue = Issue(key=issue.key, **local_fields)
+
+        session.add(issue)
+        session.commit()
+
+        logger.info(f"Created issue '{issue.key}'.")
+
+        return cls.find_one(key=issue.key)
+
+    @staticmethod
+    @with_session
+    def get(ticket_id, session=None) -> typing.Optional[Issue]:
+        return session.query(Issue).get(ticket_id)
+
+    @classmethod
+    def find_one(cls, **filters) -> typing.Optional[Issue]:
+        """Search for a single ticket based on several criteria."""
+        return next(iter(cls.find_by(limit=1, **filters)), None)
+
+    @classmethod
+    @with_session
+    def find_by(
+        cls,
+        session=None,
+        limit: int = 20,
+        fields: list = None,
+        _model: bool = False,
+        **filters,
+    ) -> list[Issue]:
+        """Search for tickets based on several criteria.
+
+        Jira's filters are also supported.
+
+        :param session: injected ORM session
+        :param limit: the max number of results retrieved
+        :param fields: additional fields to include in results schema
+        :param _model: whether to return a ticket model or cross results Jira data
+        :param filters: the query filters
+        """
+        svc = JiraSvc()
+
+        # split filters
+        native_filters = (
+            "assignee",
+            "filters",
+            "labels",
+            "key",
+            "q",
+            "sort",
+            "status",
+            "watcher",
+        )
+        local_filters = {k: v for k, v in filters.items() if k in Issue.__dict__}
+        jira_filters = {k: v for k, v in filters.items() if k in native_filters}
+
+        if _model:
+            return session.query(Issue).filter_by(**local_filters).all()
+        else:
+            # if any of the filter is not a Jira filter, then
+            # apply local filter and pass on results to jql
+            if local_filters:
+                issues = session.query(Issue).filter_by(**local_filters).all()
+
+                # skip routine if no local entries are found
+                if not issues:
+                    return []
+                jira_filters["key"] = [issue.key for issue in issues]
+
+            # fetch tickets from Jira using jql while skipping jql
+            # validation since local db might not be synched with Jira
+            query = svc.create_jql_query(
+                summary=filters.pop("q", None),
+                **jira_filters,
+            )
+
+            # include additional fields
+            fields = fields or []
+            if "*navigable" not in fields:
+                fields.append("*navigable")
+            rendered = "renderedFields" if "rendered" in fields else "fields"
+
+            issues = []  # container for issues result
+
+            jira_issues = svc.search_issues(
+                jql_str=query,
+                maxResults=limit,
+                validate_query=False,
+                fields=fields,
+                expand=rendered,
+            )
+
+            for jira_issue in jira_issues:
+                issue = cls.find_one(key=jira_issue.key, _model=True)
+
+                # prevent cases where local db is not synched with Jira
+                # for cases where Jira tickets are not yet locally present
+                if issue:
+                    issue.jira_issue = jira_issue
+
+                    # add watchers if requested
+                    if "watchers" in fields:
+                        watchers = svc.watchers(jira_issue.key)
+                        issue.jira_issue.raw["watchers"] = watchers.raw["watchers"]
+
+                    issues.append(issue)
+            return issues
+
+    @classmethod
+    @with_session
+    def update(cls, issue_id, session=None, **kwargs):
+        issue = cls.get(issue_id=issue_id)
+        for key, value in kwargs.items():
+            if hasattr(issue, key):
+                setattr(issue, key, value)
+        session.commit()
+
+        msg = f"Updated issue '{issue.key}' with the attributes: '{kwargs}'."
+        logger.info(msg)
+
+    @classmethod
+    @with_session
+    def delete(cls, issue_id, session=None):
+        issue = cls.get(issue_id=issue_id)
+        if issue:
+            session.delete(issue)
+            session.commit()
+
+            logger.info(f"Deleted issue '{issue.key}'.")
+
+    @classmethod
+    def create_comment(
+        cls,
+        issue: typing.Union[Issue, str],
+        author: str,
+        body: str,
+        watchers: list = None,
+        attachments: list = None,
+    ):
+        """Create the body of the ticket.
+
+        :param issue: the issue to comment on
+        :param author: the author of the comment
+        :param body: the body of the comment
+        :param watchers: user emails to watch for issue changes
+        :param attachments: the files to attach to the comment which
+                            are stored in Jira
+        """
+        svc = JiraSvc()
+
+        # translate watchers into jira.User objects iff exists
+        watchers = [cls.resolve_email(email, default=email) for email in watchers or []]
+
+        body = cls.create_message_body(
+            template="jira.j2",
+            values={
+                "author": svc.markdown.mention(user=author),
+                "cc": " ".join(
+                    svc.markdown.mention(user=watcher) for watcher in watchers
+                ),
+                "body": body,
+            },
+        )
+        svc.add_comment(issue=issue, body=body, is_internal=True)
+
+        # add watchers
+        svc.add_watchers(issue=issue, watchers=watchers)
+
+        # adding attachments
+        for attachment in attachments or []:
+            svc.add_attachment(issue=issue, attachment=attachment)
+
+    @staticmethod
+    def create_message_body(template=None, values=None) -> typing.Optional[str]:
+        """Create the body of the ticket.
+
+        :param template: the template to build ticket body from
+        :param values: values for template interpolation
+        """
+        if not template:
+            return None
+
+        template_path = os.path.join(
+            current_app.root_path, "templates", "ticket", "format"
+        )
+        template_filepath = os.path.join(template_path, template)
+        if not os.path.exists(template_filepath):
+            raise ValueError("Invalid template provided")
+
+        with open(template_filepath) as file:
+            content = file.read()
+
+        return jinja2.Template(content).render(**values)
+
+    @staticmethod
+    def resolve_email(email, default=None) -> jira.resources.User:
+        """Email translation to Jira user."""
+        return next(iter(JiraSvc().search_users(query=email, maxResults=1)), default)
 
 
 class ProxyJIRA(JIRA):
@@ -184,9 +457,9 @@ class JiraSvc(ProxyJIRA):
         token=None,
         **kwargs,
     ):
-        url = url or current_app.config["ATLASSIAN_URL"]
-        user = user or current_app.config["ATLASSIAN_USER"]
-        token = token or current_app.config["ATLASSIAN_API_TOKEN"]
+        url = url or os.environ["JIRA_PLATFORM_URL"]
+        user = user or os.environ["JIRA_PLATFORM_USER"]
+        token = token or os.environ["JIRA_PLATFORM_TOKEN"]
         super().__init__(
             url=url,
             user=user,
@@ -194,64 +467,22 @@ class JiraSvc(ProxyJIRA):
             **kwargs,
         )
 
-    @functools.cache
-    def boards(self) -> list[Board]:
-        def from_config(var):
-            regex = r"^JIRA_|_BOARD$"
-            return {
-                "key": re.sub(regex, "", var).lower(),
-                "name": current_app.config.get(var, env(var)),
-            }
-
-        def make_board(conf):
-            name = conf["name"]
-            boards = super(ProxyJIRA, self).boards(name=name)
-            board = next((board for board in boards if board.name == name), None)
-            default = from_config(current_app.config["JIRA_DEFAULT_BOARD"])
-            return Board(key=conf["key"], raw=board.raw, is_default=(default == conf))
-
-        configs = [from_config(var) for var in current_app.config["JIRA_BOARDS"]]
-        return [make_board(config) for config in configs]
-
-    def create_jql_query(
-        self,
-        board_keys: list[str] = None,
-        **kwargs,
-    ):
-        def find_board(key):
-            return next(b for b in self.boards() if b.key == key)
-
-        if board_keys:
-            boards = [find_board(key=key) for key in board_keys]
-
-            # translate boards into filters
-            configs = [self.board_configuration(board_id=b.id) for b in boards]
-            kwargs["filters"] = [config["filter"]["id"] for config in configs]
-
-        return super().create_jql_query(**kwargs)
-
     def add_attachment(
         self,
         issue: typing.Union[jira.Issue, str],
-        attachment: typing.Union[
-            werkzeug.datastructures.FileStorage, O365.message.MessageAttachment
-        ],
+        attachment: O365.message.MessageAttachment,
         filename: str = None,
     ) -> typing.Optional[jira.resources.Attachment]:
         """Add attachment considering different types of files."""
         content = None
-        if isinstance(attachment, werkzeug.datastructures.FileStorage):
-            filename = filename or attachment.filename
-            content = attachment.stream.read()
-        elif isinstance(attachment, O365.message.MessageAttachment):
+        if isinstance(attachment, O365.message.MessageAttachment):
             filename = filename or attachment.name
             if not attachment.content:
-                current_app.logger.warning(f"Attachment '{filename}' is empty")
+                logger.warning(f"Attachment '{filename}' is empty")
             else:
                 content = base64.b64decode(attachment.content)
         else:
-            msg = f"'{type(attachment)}' is not a supported attachment type."
-            current_app.logger.warning(msg)
+            logger.warning(f"'{type(attachment)}' is not a supported attachment type.")
 
         # no point on adding empty file
         if content:
@@ -265,9 +496,7 @@ class JiraSvc(ProxyJIRA):
                 filename=filename,
             )
 
-    def add_watchers(
-        self, issue: typing.Union[Ticket, str], watchers: list[jira.User] = None
-    ):
+    def add_watchers(self, issue: Issue, watchers: list[jira.User] = None):
         """Add a list of watchers to a ticket.
 
         :param issue: the Jira issue
@@ -278,7 +507,7 @@ class JiraSvc(ProxyJIRA):
             for watcher in watchers or []:
                 if isinstance(watcher, jira.User):
                     try:
-                        self.add_watcher(issue=str(issue), watcher=watcher.accountId)
+                        self.add_watcher(issue=issue.key, watcher=watcher.accountId)
                     except jira.exceptions.JIRAError as e:
                         if e.status_code not in (
                             requests.codes.unauthorized,
@@ -287,36 +516,9 @@ class JiraSvc(ProxyJIRA):
                             raise e
                         else:
                             name = watcher.displayName
-                            current_app.logger.warning(
+                            logger.warning(
                                 f"Watcher '{name}' has no permission to watch issue "
                                 f"'{str(issue)}'."
                             )
         else:
-            msg = "The 'me' user has no permission to manage watchers."
-            current_app.logger.warning(msg)
-
-    @staticmethod
-    def is_jira_filter(filter_name):
-        """Check whether given filter is a Jira only filter."""
-        return filter_name in [
-            "assignee",
-            "boards",
-            "category",
-            "key",
-            "q",
-            "sort",
-            "status",
-            "watcher",
-        ]
-
-    @classmethod
-    def default_board(cls):
-        return next(b for b in cls().boards() if b.is_default)
-
-    @staticmethod
-    def allowed_categories():
-        return current_app.config["JIRA_TICKET_LABEL_CATEGORIES"]
-
-    @staticmethod
-    def allowed_fields():
-        return ["watchers", "comments", "attachments", "rendered"]
+            logger.warning("The principal has no permission to manage watchers.")
