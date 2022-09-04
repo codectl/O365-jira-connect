@@ -1,20 +1,21 @@
-import re
 import functools
+import logging
+import re
 
 import requests
 import O365.mailbox
-from flask import current_app
 
-from src import utils
-from src.services.jira import JiraSvc
-from src.services.O365.filters.base import OutlookMessageFilter
-from src.services.O365.handlers.jira import JiraNotificationHandler
-from src.services.ticket import TicketSvc
+from O365_jira_connect import utils
+from O365_jira_connect.services import IssueSvc, JiraSvc
+from O365_jira_connect.filters.base import OutlookMessageFilter
+from O365_jira_connect.handlers import JiraNotificationHandler
+
+logger = logging.getLogger(__name__)
 
 
 class JiraCommentNotificationFilter(OutlookMessageFilter):
-    """Filter for messages that represent comments added to tickets. The email
-    recipient gets notified whenever a new comment has been added to the ticket.
+    """Filter for messages that represent comments added to issues. The email
+    recipient gets notified whenever a new comment has been added to the issue.
     """
 
     def __init__(self, folder: O365.mailbox.Folder):
@@ -30,9 +31,9 @@ class JiraCommentNotificationFilter(OutlookMessageFilter):
             # load message json payload
             payload = utils.message_json(message)
 
-            model = TicketSvc.find_one(key=payload["ticket"], _model=True)
+            model = IssueSvc.find_one(key=payload["issue"], _model=True)
             if not model:
-                current_app.logger.warning("Commented on ticket that was not found.")
+                logger.warning("Comment on issue that was not found.")
                 return None
 
             # locate last lent message to reply on
@@ -41,13 +42,12 @@ class JiraCommentNotificationFilter(OutlookMessageFilter):
                 last_message = self.folder.get_message(object_id=last_message_id)
             except requests.exceptions.HTTPError as e:
                 if e.response.status_code == requests.codes.not_found:
-                    msg = "Message to reply to was not found. No email was sent."
-                    current_app.logger.warning(msg)
+                    logger.warning("Reply-to message was not found; no email was sent.")
             else:
 
                 # locate the specific comment given the
                 comment = svc.comment(
-                    issue=payload["ticket"],
+                    issue=payload["issue"],
                     comment=payload["id"],
                     expand="renderedBody",
                 )
