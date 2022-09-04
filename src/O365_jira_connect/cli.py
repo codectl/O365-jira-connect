@@ -123,6 +123,49 @@ def o365_options(f):
     return f
 
 
+def jira_options(f):
+    f = click.option(
+        "--issue-type",
+        required=True,
+        type=str,
+        default="Task",
+        envvar="JIRA_ISSUE_TYPE",
+        show_envvar=True,
+        help="the type of issue to create",
+    )(f)
+    f = click.option(
+        "--default-labels",
+        required=True,
+        type=str,
+        multiple=True,
+        default=["support"],
+        envvar="JIRA_ISSUE_DEFAULT_LABELS",
+        show_envvar=True,
+        help="the default labels assigned to issue",
+    )(f)
+    f = click.option(
+        "--blacklist",
+        required=True,
+        type=str,
+        multiple=True,
+        default=[],
+        envvar="JIRA_BLACKLIST",
+        show_envvar=True,
+        help="the blacklist domains",
+    )(f)
+    f = click.option(
+        "--whitelist",
+        required=True,
+        type=str,
+        multiple=True,
+        default=[],
+        envvar="JIRA_WHITELIST",
+        show_envvar=True,
+        help="the whitelist domains",
+    )(f)
+    return f
+
+
 @cli.command()
 @o365_options
 def authorize(**params):
@@ -147,6 +190,7 @@ def authorize(**params):
     help="the O365 connection timeout in minutes",
 )
 @o365_options
+@jira_options
 @cli.command()
 def handle_incoming_events(**params):
     """Handle incoming O365 events."""
@@ -154,7 +198,7 @@ def handle_incoming_events(**params):
     keep_alive_interval = params.pop("keep_alive_interval")
 
     subscriber = create_subscriber(**params)
-    handler = create_handler(subscriber)
+    handler = create_handler(subscriber, **params)
 
     # start listening for streaming events ...
     subscriber.start_streaming(
@@ -223,8 +267,8 @@ def create_subscriber(principal: str = None, **kwargs):
 
 
 def create_handler(subscriber, **kwargs):
-    whitelist = kwargs["EMAIL_WHITELISTED_DOMAINS"]
-    blacklist = kwargs["EMAIL_BLACKLIST"]
+    whitelist = kwargs.pop("EMAIL_WHITELISTED_DOMAINS")
+    blacklist = kwargs.pop("EMAIL_BLACKLIST")
     resources = [sub.resource for sub in subscriber.subscriptions]
     main_resource = subscriber.main_resource
     filters = [
@@ -235,5 +279,8 @@ def create_handler(subscriber, **kwargs):
         ValidateMetadataFilter(),
     ]
     return JiraNotificationHandler(
-        parent=subscriber, namespace=subscriber.namespace, filters=filters
+        parent=subscriber,
+        namespace=subscriber.namespace,
+        filters=filters,
+        configs=kwargs,
     )
