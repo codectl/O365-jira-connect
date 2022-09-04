@@ -16,9 +16,11 @@ def init_engine(engine_url, debug=False):
 
 def with_session(f):
     """Create session for given function."""
+
     def wrapper(*args, **kwargs):
         session = Session()
         session.begin()
         f(*args, session=session, **kwargs)
         session.close()
+
     return wrapper
