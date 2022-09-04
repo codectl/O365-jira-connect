@@ -19,7 +19,7 @@ from O365_jira_connect.filters import (
     SenderEmailDomainWhitelistedFilter,
     ValidateMetadataFilter,
 )
-from O365_jira_connect.handlers.jira import JiraNotificationHandler
+from O365_jira_connect.handlers import JiraNotificationHandler
 
 # configure logging
 logging.basicConfig(level=logging.INFO)

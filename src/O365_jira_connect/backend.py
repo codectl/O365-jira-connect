@@ -4,7 +4,7 @@ import typing
 from O365.utils import BaseTokenBackend
 
 from O365_jira_connect.components import with_session
-from O365_jira_connect.components.models import AccessToken
+from O365_jira_connect.models import AccessToken
 
 logger = logging.getLogger(__name__)
 
