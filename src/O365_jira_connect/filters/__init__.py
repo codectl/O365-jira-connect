@@ -4,10 +4,10 @@ from .SenderEmailBlacklistFilter import SenderEmailBlacklistFilter
 from .SenderEmailDomainWhitelistFilter import SenderEmailDomainWhitelistedFilter
 from .ValidateMetadataFilter import ValidateMetadataFilter
 
-__all__ = [
+__all__ = (
     JiraCommentNotificationFilter,
     RecipientControlFilter,
     SenderEmailBlacklistFilter,
     SenderEmailDomainWhitelistedFilter,
     ValidateMetadataFilter,
-]
+)
