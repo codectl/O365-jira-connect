@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import environs
 
 
-__all__ = ("Config", )
+__all__ = ("Config",)
 
 env = environs.Env()
 env.read_env(".env")
