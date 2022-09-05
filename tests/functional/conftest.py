@@ -38,12 +38,12 @@ def project(app, svc, request):
     try:
         project = svc.create_project(key="UT", name="UNITTESTS")
     except jira.JIRAError as ex:
-        if ex.status_code == 400:
-            pass  # suppress project exists error
-        elif ex.status_code == 500:
-            pass  # suppress issue #1480 (pycontribs/jira)
-        else:
+        if ex.status_code not in (400, 500):
             raise ex
+        else:
+            # suppress 400: project exists error
+            # suppress 500: issue #1480 (pycontribs/jira)
+            pass
         project = svc.project(id="UT")
     request.cls.project = project
     return project

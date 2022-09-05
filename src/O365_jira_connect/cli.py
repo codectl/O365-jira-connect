@@ -42,7 +42,7 @@ dotenv.load_dotenv(".env")
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 def cli(debug, database):
     if debug:
-        click.echo(f"Debug mode is enabled")
+        click.echo("Debug mode is enabled")
         logger.setLevel(logging.DEBUG)
     init_engine(engine_url=database, debug=debug)
 
@@ -229,8 +229,6 @@ def authorize_account(
         protocol = MSGraphProtocol(**kwargs)
     elif protocol == "office":
         protocol = MSOffice365Protocol(**kwargs)
-    else:
-        raise ValueError
 
     # ignore scopes on 'credentials' flow
     if scopes and grant_type == "credentials":
