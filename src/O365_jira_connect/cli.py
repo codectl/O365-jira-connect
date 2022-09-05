@@ -91,19 +91,19 @@ def o365_options(f):
         help="the OAuth2 grant type",
     )(f)
     f = click.option(
-        "--tenant-id",
-        required=True,
-        type=str,
-        help="the O365 tenant",
-        envvar="O365_TENANT_ID",
-        show_envvar=True,
-    )(f)
-    f = click.option(
         "--principal",
         required=True,
         type=str,
         help="the resource principal",
         envvar="O365_PRINCIPAL",
+        show_envvar=True,
+    )(f)
+    f = click.option(
+        "--tenant-id",
+        required=True,
+        type=str,
+        help="the O365 tenant",
+        envvar="O365_TENANT_ID",
         show_envvar=True,
     )(f)
     f = click.option(
