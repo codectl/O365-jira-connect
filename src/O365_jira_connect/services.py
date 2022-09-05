@@ -1,19 +1,16 @@
 import base64
-import functools
+import datetime
 import io
 import logging
 import os
-import re
 import tempfile
 import typing
 
 import jira.resources
 import O365
 import requests
-import werkzeug.datastructures
 from jira import JIRA
 
-from src.models.jira import Board
 from O365_jira_connect.components import with_session
 from O365_jira_connect.models import Issue
 
@@ -71,7 +68,7 @@ class IssueSvc:
         priority_opt = ["high", "low"]
         priority = (kwargs.get("priority") or "").lower()
         priority = {"name": priority.capitalize()} if priority in priority_opt else None
-        labels = kwargs.get("labels", []) + configs["JIRA_ISSUE_DEFAULT_LABELS"]
+        labels = kwargs.get("labels", []) + configs["JIRA_DEFAULT_LABELS"]
 
         # create ticket in Jira
         issue = svc.create_issue(
@@ -221,6 +218,17 @@ class IssueSvc:
             session.commit()
 
             logger.info(f"Deleted issue '{issue.key}'.")
+
+    @staticmethod
+    def add_message_to_history(message: O365.Message, model: Issue):
+        """Add a message to the issue history."""
+        messages_id = model.outlook_messages_id.split(",")
+        if message.object_id not in messages_id:
+            IssueSvc.update(
+                issue_id=model.id,
+                outlook_messages_id=",".join(messages_id + [message.object_id]),
+                updated_at=datetime.datetime.utcnow(),
+            )
 
     @classmethod
     def create_comment(

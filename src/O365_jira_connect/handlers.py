@@ -1,4 +1,3 @@
-import datetime
 import itertools
 import json
 import logging
@@ -11,7 +10,6 @@ from O365_notifications.base import O365Notification, O365NotificationHandler
 from O365_notifications.constants import O365EventType, O365Namespace
 
 from O365_jira_connect.filters.base import OutlookMessageFilter
-from O365_jira_connect.models import Issue
 from O365_jira_connect.services import IssueSvc
 
 __all__ = ("JiraNotificationHandler",)
@@ -107,7 +105,7 @@ class JiraNotificationHandler(O365NotificationHandler):
                 )
 
                 # append message to history
-                self.add_message_to_history(message, existing_issue)
+                svc.add_message_to_history(message, existing_issue)
 
                 logger.info(f"New comment added on issue '{existing_issue.key}'.")
             else:
@@ -140,7 +138,7 @@ class JiraNotificationHandler(O365NotificationHandler):
             notification = self.notify_reporter(message=message, issue_key=model.key)
 
             # append message to history
-            self.add_message_to_history(message=notification, model=model)
+            svc.add_message_to_history(message=notification, model=model)
 
             logger.info(f"New issue created with Jira key '{model.key}'.")
 
@@ -193,17 +191,6 @@ class JiraNotificationHandler(O365NotificationHandler):
         reply = cls.create_reply(message, values={"body": body, "metadata": [metadata]})
         reply.send()
         return reply
-
-    @staticmethod
-    def add_message_to_history(message: O365.Message, model: Issue):
-        """Add a message to the issue history."""
-        messages_id = model.outlook_messages_id.split(",")
-        if message.object_id not in messages_id:
-            IssueSvc.update(
-                issue_id=model.id,
-                outlook_messages_id=",".join(messages_id + [message.object_id]),
-                updated_at=datetime.datetime.utcnow(),
-            )
 
     @staticmethod
     def create_reply(message: O365.Message, values: dict = None):
