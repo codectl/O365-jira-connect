@@ -32,7 +32,7 @@ mistune = "^2.0.4"
 O365 = "^2.0.20"
 O365-notifications = "^0.1.1"
 python = "^3.9"
-python-dotenv = "^0.20.0"
+python-dotenv = "^0.21.0"
 SQLAlchemy = "^1.4.40"
 
 [tool.poetry.dev-dependencies]
