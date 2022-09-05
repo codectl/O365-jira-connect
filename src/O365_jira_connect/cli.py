@@ -197,8 +197,8 @@ def messages(**_):
     help="the whitelist filter",
 )
 @jira_options
-@click.pass_context
 @messages.command()
+@click.pass_context
 def start_streaming(ctx, connection_timeout, keep_alive_interval, **params):
     """Start streaming connection for handling incoming O365 events."""
     subscriber = create_subscriber(**ctx.parent.params)
