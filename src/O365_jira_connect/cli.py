@@ -49,59 +49,11 @@ def cli(debug, database):
 
 def o365_options(f):
     f = click.option(
-        "--protocol",
+        "--retries",
         required=False,
-        type=click.Choice(["graph", "office"]),
-        default="graph",
-        show_default=True,
-        help="the O365 protocol",
-    )(f)
-    f = click.option(
-        "--api-version",
-        required=False,
-        type=str,
-        help="the O365 API version",
-    )(f)
-    f = click.option(
-        "--principal",
-        required=True,
-        type=str,
-        help="the resource principal",
-        envvar="O365_PRINCIPAL",
-        show_envvar=True,
-    )(f)
-    f = click.option(
-        "--tenant-id",
-        required=True,
-        type=str,
-        help="the O365 tenant",
-        envvar="O365_TENANT_ID",
-        show_envvar=True,
-    )(f)
-    f = click.option(
-        "--client-id",
-        required=True,
-        type=str,
-        envvar="O365_CLIENT_ID",
-        show_envvar=True,
-        help="the O365 application/client id",
-    )(f)
-    f = click.option(
-        "--client-secret",
-        required=False,
-        type=str,
-        default=None,
-        envvar="O365_CLIENT_SECRET",
-        show_envvar=True,
-        help="the O365 client secret",
-    )(f)
-    f = click.option(
-        "--grant-type",
-        required=False,
-        type=click.Choice(["credentials", "authorization"]),
-        default="credentials",
-        show_default=True,
-        help="the OAuth2 grant type",
+        type=int,
+        default=0,
+        help="number of retries when request fails",
     )(f)
     f = click.option(
         "--scopes",
@@ -114,11 +66,59 @@ def o365_options(f):
         help="the O365 scopes",
     )(f)
     f = click.option(
-        "--retries",
+        "--client-secret",
         required=False,
-        type=int,
-        default=0,
-        help="number of retries when request fails",
+        type=str,
+        default=None,
+        envvar="O365_CLIENT_SECRET",
+        show_envvar=True,
+        help="the O365 client secret",
+    )(f)
+    f = click.option(
+        "--client-id",
+        required=True,
+        type=str,
+        envvar="O365_CLIENT_ID",
+        show_envvar=True,
+        help="the O365 application/client id",
+    )(f)
+    f = click.option(
+        "--grant-type",
+        required=False,
+        type=click.Choice(["credentials", "authorization"]),
+        default="credentials",
+        show_default=True,
+        help="the OAuth2 grant type",
+    )(f)
+    f = click.option(
+        "--tenant-id",
+        required=True,
+        type=str,
+        help="the O365 tenant",
+        envvar="O365_TENANT_ID",
+        show_envvar=True,
+    )(f)
+    f = click.option(
+        "--principal",
+        required=True,
+        type=str,
+        help="the resource principal",
+        envvar="O365_PRINCIPAL",
+        show_envvar=True,
+    )(f)
+    f = click.option(
+        "--api-version",
+        required=False,
+        type=str,
+        help="the O365 API version",
+    )(f)
+    f = click.option(
+        "--protocol",
+        required=False,
+        type=click.Choice(["graph", "office"]),
+        default="graph",
+        show_default=True,
+        help="the O365 protocol",
     )(f)
     return f
 
@@ -197,8 +197,8 @@ def messages(**_):
     help="the whitelist filter",
 )
 @jira_options
-@messages.command()
 @click.pass_context
+@messages.command()
 def start_streaming(ctx, connection_timeout, keep_alive_interval, **params):
     """Start streaming connection for handling incoming O365 events."""
     subscriber = create_subscriber(**ctx.parent.params)
