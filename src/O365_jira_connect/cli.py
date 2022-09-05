@@ -13,11 +13,11 @@ from O365_notifications.constants import O365EventType
 from O365_jira_connect.backend import DatabaseTokenBackend
 from O365_jira_connect.components import init_engine
 from O365_jira_connect.filters import (
+    BlacklistFilter,
     JiraCommentNotificationFilter,
     RecipientControlFilter,
-    SenderEmailBlacklistFilter,
-    SenderEmailDomainWhitelistedFilter,
     ValidateMetadataFilter,
+    WhitelistFilter,
 )
 from O365_jira_connect.handlers import JiraNotificationHandler
 
@@ -139,29 +139,9 @@ def jira_options(f):
         type=str,
         multiple=True,
         default=["support"],
-        envvar="JIRA_ISSUE_DEFAULT_LABELS",
+        envvar="JIRA_DEFAULT_LABELS",
         show_envvar=True,
         help="the default labels assigned to issue",
-    )(f)
-    f = click.option(
-        "--blacklist",
-        required=True,
-        type=str,
-        multiple=True,
-        default=[],
-        envvar="JIRA_BLACKLIST",
-        show_envvar=True,
-        help="the blacklist domains",
-    )(f)
-    f = click.option(
-        "--whitelist",
-        required=True,
-        type=str,
-        multiple=True,
-        default=[],
-        envvar="JIRA_WHITELIST",
-        show_envvar=True,
-        help="the whitelist domains",
     )(f)
     return f
 
@@ -171,6 +151,13 @@ def jira_options(f):
 def authorize(**params):
     """Grant service authorization to O365 resources."""
     return authorize_account(**params)
+
+
+@cli.group()
+@o365_options
+def messages(**_):
+    """Operations that pertain to O365 messages."""
+    pass
 
 
 @click.option(
@@ -189,15 +176,32 @@ def authorize(**params):
     show_envvar=True,
     help="the O365 connection timeout in minutes",
 )
-@o365_options
+@click.option(
+    "--blacklist",
+    required=True,
+    type=str,
+    multiple=True,
+    default=[],
+    envvar="BLACKLIST",
+    show_envvar=True,
+    help="the blacklist filter",
+)
+@click.option(
+    "--whitelist",
+    required=True,
+    type=str,
+    multiple=True,
+    default=[],
+    envvar="WHITELIST",
+    show_envvar=True,
+    help="the whitelist filter",
+)
 @jira_options
-@cli.command()
-def handle_incoming_events(**params):
-    """Handle incoming O365 events."""
-    connection_timeout = params.pop("connection_timeout")
-    keep_alive_interval = params.pop("keep_alive_interval")
-
-    subscriber = create_subscriber(**params)
+@messages.command()
+@click.pass_context
+def start_streaming(ctx, connection_timeout, keep_alive_interval, **params):
+    """Start streaming connection for handling incoming O365 events."""
+    subscriber = create_subscriber(**ctx.parent.params)
     handler = create_handler(subscriber, **params)
 
     # start listening for streaming events ...
@@ -266,21 +270,23 @@ def create_subscriber(principal: str = None, **kwargs):
     return subscriber
 
 
-def create_handler(subscriber, **kwargs):
-    whitelist = kwargs.pop("EMAIL_WHITELISTED_DOMAINS")
-    blacklist = kwargs.pop("EMAIL_BLACKLIST")
+def create_handler(subscriber, **configs):
     resources = [sub.resource for sub in subscriber.subscriptions]
     main_resource = subscriber.main_resource
     filters = [
+        BlacklistFilter(blacklist=configs.pop("BLACKLIST")),
         JiraCommentNotificationFilter(folder=resources[0]),
         RecipientControlFilter(email=main_resource, ignore=[resources[1]]),
-        SenderEmailBlacklistFilter(blacklist=blacklist),
-        SenderEmailDomainWhitelistedFilter(whitelisted_domains=whitelist),
         ValidateMetadataFilter(),
+        WhitelistFilter(whitelist=configs.pop("WHITELIST")),
     ]
+    configs = {
+        "JIRA_ISSUE_TYPE": configs["issue_type"],
+        "JIRA_DEFAULT_LABELS": configs["default_labels"],
+    }
     return JiraNotificationHandler(
         parent=subscriber,
         namespace=subscriber.namespace,
         filters=filters,
-        configs=kwargs,
+        configs=configs,
     )
