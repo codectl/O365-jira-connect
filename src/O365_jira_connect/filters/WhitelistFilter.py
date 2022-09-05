@@ -2,14 +2,14 @@ import logging
 
 from O365_jira_connect.filters.base import OutlookMessageFilter
 
-__all__ = ("SenderWhitelistFilter",)
+__all__ = ("WhitelistFilter",)
 
 logger = logging.getLogger(__name__)
 
 
-class SenderWhitelistFilter(OutlookMessageFilter):
-    """Filter for message whose sender is whitelisted. It currently checks for the
-    sender's domain."""
+class WhitelistFilter(OutlookMessageFilter):
+    """Filter for message whitelist. It currently checks if the sender's domain is
+    whitelisted."""
 
     def __init__(self, whitelisted):
         self.whitelisted = whitelisted

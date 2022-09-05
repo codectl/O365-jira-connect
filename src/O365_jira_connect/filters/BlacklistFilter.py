@@ -2,14 +2,14 @@ import logging
 
 from O365_jira_connect.filters.base import OutlookMessageFilter
 
-__all__ = ("SenderBlacklistFilter",)
+__all__ = ("BlacklistFilter",)
 
 logger = logging.getLogger(__name__)
 
 
-class SenderBlacklistFilter(OutlookMessageFilter):
-    """Filter for message whose sender is not blacklisted. It currently checks for
-    sender's email."""
+class BlacklistFilter(OutlookMessageFilter):
+    """Filter for message blacklist. It currently checks if sender's email is
+    blacklisted."""
 
     def __init__(self, blacklist):
         self.blacklist = blacklist
