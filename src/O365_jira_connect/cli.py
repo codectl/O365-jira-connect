@@ -156,7 +156,7 @@ def authorize(**params):
 @cli.group()
 @o365_options
 def messages(**_):
-    """Operations that pertain to O365 messages."""
+    """Operations involving O365 messages."""
     pass
 
 
