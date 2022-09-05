@@ -1,10 +1,15 @@
-from flask import current_app
+import logging
 
-from src.services.O365.filters.base import OutlookMessageFilter
+from O365_jira_connect.filters.base import OutlookMessageFilter
+
+__all__ = ("SenderBlacklistFilter",)
+
+logger = logging.getLogger(__name__)
 
 
-class SenderEmailBlacklistFilter(OutlookMessageFilter):
-    """Filter for message whose sender email is not blacklisted"""
+class SenderBlacklistFilter(OutlookMessageFilter):
+    """Filter for message whose sender is not blacklisted. It currently checks for
+    sender's email."""
 
     def __init__(self, blacklist):
         self.blacklist = blacklist
@@ -15,7 +20,7 @@ class SenderEmailBlacklistFilter(OutlookMessageFilter):
 
         sender = message.sender.address
         if sender in self.blacklist:
-            current_app.logger.info(
+            logger.info(
                 f"Message skipped as the sender's email '{sender}' is blacklisted."
             )
             return None

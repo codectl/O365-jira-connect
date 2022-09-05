@@ -1,21 +1,26 @@
-from flask import current_app
+import logging
 
-from src.services.O365.filters.base import OutlookMessageFilter
+from O365_jira_connect.filters.base import OutlookMessageFilter
+
+__all__ = ("SenderWhitelistFilter",)
+
+logger = logging.getLogger(__name__)
 
 
-class SenderEmailDomainWhitelistedFilter(OutlookMessageFilter):
-    """Filter for message whose sender email domain is whitelisted"""
+class SenderWhitelistFilter(OutlookMessageFilter):
+    """Filter for message whose sender is whitelisted. It currently checks for the
+    sender's domain."""
 
-    def __init__(self, whitelisted_domains):
-        self.whitelisted_domains = whitelisted_domains
+    def __init__(self, whitelisted):
+        self.whitelisted = whitelisted
 
     def apply(self, message):
         if not message:
             return None
 
         sender = message.sender.address
-        if sender.split("@")[1] not in self.whitelisted_domains:
-            current_app.logger.info(
+        if sender.split("@")[1] not in self.whitelisted:
+            logger.info(
                 f"Message skipped as the sender's email '{sender}' is not whitelisted."
             )
             return None

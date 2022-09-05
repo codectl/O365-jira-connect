@@ -1,8 +1,11 @@
-from flask import current_app
+import logging
 
-from src.services.O365.filters.base import OutlookMessageFilter
-from src.services.O365.handlers.jira import JiraNotificationHandler
-from src.services.ticket import TicketSvc
+from O365_jira_connect.filters.base import OutlookMessageFilter
+from O365_jira_connect.services import IssueSvc
+
+__all__ = ("ValidateMetadataFilter",)
+
+logger = logging.getLogger(__name__)
 
 
 class ValidateMetadataFilter(OutlookMessageFilter):
@@ -20,21 +23,21 @@ class ValidateMetadataFilter(OutlookMessageFilter):
 
             # append message to history if jira metadata is present
             opts = {"outlook_conversation_id": message.conversation_id, "_model": True}
-            model = TicketSvc.find_one(**opts)
+            model = IssueSvc.find_one(**opts)
 
-            # ignore the notification email sent to user after the creation of a ticket
-            if soup.head.find("meta", attrs={"content": "jira ticket notification"}):
-                JiraNotificationHandler.add_message_to_history(message, model=model)
-                current_app.logger.info(
+            # ignore the notification email sent to user after the creation of an issue
+            if soup.head.find("meta", attrs={"content": "jira issue notification"}):
+                IssueSvc.add_message_to_history(message, model=model)
+                logger.info(
                     "Message filtered as this is a message notification to the user "
-                    "about created ticket."
+                    "about created issue."
                 )
                 return None
 
-            # ignore the message sent when a new comment is added to the ticket
+            # ignore the message sent when a new comment is added to the issue
             elif soup.head.find("meta", attrs={"content": "relay jira comment"}):
-                JiraNotificationHandler.add_message_to_history(message, model=model)
-                current_app.logger.info(
+                IssueSvc.add_message_to_history(message, model=model)
+                logger.info(
                     "Message filtered as this is a relay message from a Jira comment."
                 )
                 return None

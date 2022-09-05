@@ -1,10 +1,14 @@
-import O365.mailbox
 import itertools
+import logging
 
-from flask import current_app
+import O365.mailbox
 
-from src.services.O365.filters.base import OutlookMessageFilter
-from src.services.ticket import TicketSvc
+from O365_jira_connect.filters.base import OutlookMessageFilter
+from O365_jira_connect.services import IssueSvc
+
+__all__ = ("RecipientControlFilter",)
+
+logger = logging.getLogger(__name__)
 
 
 class RecipientControlFilter(OutlookMessageFilter):
@@ -32,18 +36,17 @@ class RecipientControlFilter(OutlookMessageFilter):
             and self.email in other_recipients
             and any(comp.folder_id == message.folder_id for comp in self.ignore)
         ):
-            msg = "Message filtered as the notification is a duplicate."
-            current_app.logger.info(msg)
+            logger.info("Message filtered as the notification is a duplicate.")
             return None
 
-        # check for existing ticket
+        # check for existing issue
         cid = message.conversation_id
-        existing_ticket = TicketSvc.find_one(outlook_conversation_id=cid, _model=True)
+        existing_issue = IssueSvc.find_one(outlook_conversation_id=cid, _model=True)
 
-        if not existing_ticket:
+        if not existing_issue:
             # exclude if new message initiated by the recipient
             if self.email == message.sender.address:
-                current_app.logger.info(
+                logger.info(
                     f"Message filtered as the recipient '{self.email}' "
                     "is the sender of a new conversation."
                 )
@@ -52,7 +55,7 @@ class RecipientControlFilter(OutlookMessageFilter):
             # exclude if new message did not come from the recipient
             # and is not directly sent 'to' recipient (must be in cc or bcc)
             elif self.email not in (e.address for e in message.to):
-                current_app.logger.info(
+                logger.info(
                     f"Message filtered as the recipient '{self.email}' "
                     "is not in the senders list of a new conversation."
                 )

@@ -10,6 +10,8 @@ from O365_jira_connect.services import IssueSvc, JiraSvc
 from O365_jira_connect.filters.base import OutlookMessageFilter
 from O365_jira_connect.handlers import JiraNotificationHandler
 
+__all__ = ("JiraCommentNotificationFilter",)
+
 logger = logging.getLogger(__name__)
 
 
