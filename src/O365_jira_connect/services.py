@@ -6,6 +6,7 @@ import os
 import tempfile
 import typing
 
+import jinja2
 import jira.resources
 import O365
 import requests
@@ -282,9 +283,7 @@ class IssueSvc:
         if not template:
             return None
 
-        template_path = os.path.join(
-            current_app.root_path, "templates", "ticket", "format"
-        )
+        template_path = os.path.join(__package__, "templates", "messages")
         template_filepath = os.path.join(template_path, template)
         if not os.path.exists(template_filepath):
             raise ValueError("Invalid template provided")
