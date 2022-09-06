@@ -204,7 +204,11 @@ def streaming(ctx, connection_timeout, keep_alive_interval, **params):
     """Start streaming connection for handling incoming O365 events."""
     parent_params = ctx.parent.params
     if parent_params["grant_type"] == "credentials":
-        click.echo("Streaming is incompatible with grant type 'credentials'")
+        click.echo(
+            "Streaming is incompatible with grant type 'credentials'",
+            err=True,
+            color=True,
+        )
         sys.exit(0)
 
     subscriber = create_subscriber(**parent_params)
