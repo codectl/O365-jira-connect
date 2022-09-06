@@ -292,12 +292,12 @@ def create_handler(subscriber, **configs):
     ]
 
     # parametrize jira
-    credentials = (os.environ["JIRA_PLATFORM_USER"], os.environ["JIRA_PLATFORM_TOKEN"])
     jira_s.__init__(
-        {
-            "server": os.environ["JIRA_PLATFORM_URL"],
-            "basic_auth": credentials,
-        }
+        server=os.environ["JIRA_PLATFORM_URL"],
+        basic_auth=(
+            os.environ["JIRA_PLATFORM_USER"],
+            os.environ["JIRA_PLATFORM_TOKEN"],
+        ),
     )
 
     return JiraNotificationHandler(
