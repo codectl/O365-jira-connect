@@ -243,9 +243,9 @@ class JiraSvc(ProxyJIRA):
         else:
             logger.warning("The principal has no permission to manage watchers.")
 
-    def resolve_email(self, email, default=None) -> jira.resources.User:
+    def resolve_email(self, email) -> typing.Union[jira.resources.User, str]:
         """Translation given email into Jira user."""
-        return next(iter(self.search_users(query=email, maxResults=1)), default)
+        return next(iter(self.search_users(query=email, maxResults=1)), email)
 
 
 # global instance service

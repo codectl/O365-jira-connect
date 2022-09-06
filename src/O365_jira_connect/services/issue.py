@@ -18,9 +18,7 @@ logger = logging.getLogger(__name__)
 class IssueSvc:
     @classmethod
     @with_session
-    def create(
-        cls, session=None, attachments: list = None, **kwargs
-    ) -> Issue:
+    def create(cls, session=None, attachments: list = None, **kwargs) -> Issue:
         """Create a new issue by calling Jira API to create a new
         issue. A new local reference to the issue is also created.
 
@@ -37,12 +35,10 @@ class IssueSvc:
             watchers: user emails to watch for issue changes
         """
         # translate emails into jira.User objects, if possible
-        reporter_arg = kwargs.get("reporter")
-        reporter = jira_s.resolve_email(email=reporter_arg) or reporter_arg
-        watchers = [
-            jira_s.resolve_email(email, default=email)
-            for email in kwargs.get("watchers") or []
-        ]
+        reporter_kw = kwargs.get("reporter")
+        watchers_kw = kwargs.get("watchers")
+        reporter = jira_s.resolve_email(email=reporter_kw) or reporter_kw
+        watchers = [jira_s.resolve_email(email=email) for email in watchers_kw or []]
 
         # create issue body with Jira markdown format
         body = cls.create_message_body(
@@ -241,7 +237,7 @@ class IssueSvc:
                             are stored in Jira
         """
         # translate watchers into jira.User objects iff exists
-        watchers = [jira_s.resolve_email(email, default=email) for email in watchers or []]
+        watchers = [jira_s.resolve_email(email=email) for email in watchers or []]
 
         body = cls.create_message_body(
             template="jira.j2",
