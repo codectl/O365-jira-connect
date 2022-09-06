@@ -48,7 +48,7 @@ class JiraTestCase(unittest.TestCase):
     def setUp(self):
         # add a guest user
         self.jira_s.add_user(username="guest", email="guest@example.com")
-        self.guest_user = next(self.svc.search_users(query="guest"))
+        self.guest_user = next(self.jira_s.search_users(query="guest"))
 
     def tearDown(self):
         self.jira_s.delete_project(self.project)

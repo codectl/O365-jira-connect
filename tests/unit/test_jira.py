@@ -3,7 +3,7 @@ import pytest
 import requests
 import requests_mock
 
-from src.services.jira import JiraSvc
+from O365_jira_connect.services.jira import JiraSvc
 
 
 @pytest.fixture
@@ -12,45 +12,46 @@ def adapter():
 
 
 @pytest.fixture
-def svc(adapter):
-    svc = JiraSvc(
-        url="https://jira.atlassian.com",
-        user="test",
-        token="xxx",
+def jira_s(adapter):
+    jira_s = JiraSvc(
+        server="https://jira.atlassian.com",
+        basic_auth=("test", "xxx"),
         get_server_info=False,
     )
     session = requests.Session()
     session.mount("https://", adapter)
-    svc._session = session
-    return svc
+    jira_s._session = session
+    return jira_s
 
 
 class TestJiraSvc:
-    def test_exists_issue(self, svc, mocker):
-        mocker.patch.object(svc, "issue", return_value="")
-        assert svc.exists_issue("Jira-123") is True
+    def test_exists_issue(self, jira_s, mocker):
+        mocker.patch.object(jira_s, "issue", return_value="")
+        assert jira_s.exists_issue("Jira-123") is True
 
-        mocker.patch.object(svc, "issue", side_effect=jira.JIRAError(status_code=404))
-        assert svc.exists_issue("Jira-123") is False
+        mocker.patch.object(
+            jira_s, "issue", side_effect=jira.JIRAError(status_code=404)
+        )
+        assert jira_s.exists_issue("Jira-123") is False
 
-    def test_has_permissions(self, svc, adapter):
-        path = svc._get_url("mypermissions")
+    def test_has_permissions(self, jira_s, adapter):
+        path = jira_s._get_url("mypermissions")
         data = {"permissions": {}}
         adapter.register_uri("GET", path, json=data)
-        assert svc.has_permissions(permissions=[]) is True
-        assert svc.has_permissions(permissions=["perm"]) is False
+        assert jira_s.has_permissions(permissions=[]) is True
+        assert jira_s.has_permissions(permissions=["perm"]) is False
         data["permissions"]["perm1"] = {"havePermission": True}
         adapter.register_uri("GET", path, json=data)
-        assert svc.has_permissions(permissions=["perm1"]) is True
-        assert svc.has_permissions(permissions=["perm1", "perm2"]) is False
+        assert jira_s.has_permissions(permissions=["perm1"]) is True
+        assert jira_s.has_permissions(permissions=["perm1", "perm2"]) is False
         data["permissions"]["perm2"] = {"havePermission": False}
         adapter.register_uri("GET", path, json=data)
-        assert svc.has_permissions(permissions=["perm1"]) is True
-        assert svc.has_permissions(permissions=["perm2"]) is False
-        assert svc.has_permissions(permissions=["perm1", "perm2"]) is False
+        assert jira_s.has_permissions(permissions=["perm1"]) is True
+        assert jira_s.has_permissions(permissions=["perm2"]) is False
+        assert jira_s.has_permissions(permissions=["perm1", "perm2"]) is False
 
-    def test_jql_builder(self, svc):
-        query = svc.create_jql_query(
+    def test_jql_builder(self, jira_s):
+        query = jira_s.create_jql_query(
             assignee="user",
             expand=["renderedFields"],
             filters=["filter1", "filter2"],
@@ -71,8 +72,8 @@ class TestJiraSvc:
         assert "watcher=test" in query
         assert "ORDER BY created" in query
 
-    def test_mention(self, svc):
+    def test_mention(self, jira_s):
         email = "user@xyz.com"
-        user = jira.User({}, svc._session, raw={"self": {}, "accountId": "123"})
-        assert svc.markdown.mention(email) == f"[{email};|mailto:{email}]"
-        assert svc.markdown.mention(user) == "[~accountid:123]"
+        user = jira.User({}, jira_s._session, raw={"self": {}, "accountId": "123"})
+        assert jira_s.markdown.mention(email) == f"[{email};|mailto:{email}]"
+        assert jira_s.markdown.mention(user) == "[~accountid:123]"
