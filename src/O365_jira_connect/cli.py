@@ -290,6 +290,7 @@ def create_handler(subscriber, **configs):
         WhitelistFilter(whitelist=configs.pop("WHITELIST")),
     ]
 
+    # parametrize jira
     jira_s.__init__(configs=configs)
 
     return JiraNotificationHandler(
