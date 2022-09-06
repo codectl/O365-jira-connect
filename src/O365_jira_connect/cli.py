@@ -1,4 +1,5 @@
 import logging
+import os
 
 import sys
 
@@ -291,7 +292,13 @@ def create_handler(subscriber, **configs):
     ]
 
     # parametrize jira
-    jira_s.__init__(configs=configs)
+    credentials = (os.environ["JIRA_PLATFORM_USER"], os.environ["JIRA_PLATFORM_TOKEN"])
+    jira_s.__init__(
+        {
+            "server": os.environ["JIRA_PLATFORM_URL"],
+            "basic_auth": credentials,
+        }
+    )
 
     return JiraNotificationHandler(
         parent=subscriber,

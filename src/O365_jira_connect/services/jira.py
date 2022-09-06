@@ -20,12 +20,7 @@ class ProxyJIRA(JIRA):
     """Proxy class for Jira."""
 
     def __init__(self, **kwargs):
-        url = kwargs.pop("url")
-        user = kwargs.pop("user")
-        token = kwargs.pop("token")
         super().__init__(
-            server=url,
-            basic_auth=(user, token),
             options={
                 "rest_path": "api",
                 "rest_api_version": 3,
@@ -174,18 +169,9 @@ class JiraMarkdown(ProxyJIRA):
 class JiraSvc(ProxyJIRA):
     """Service to handle Jira operations."""
 
-    def __init__(
-        self,
-        configs=None,
-        **kwargs,
-    ):
-        if configs:
-            super().__init__(
-                url=configs["JIRA_PLATFORM_URL"],
-                user=configs["JIRA_PLATFORM_USER"],
-                token=configs["JIRA_PLATFORM_TOKEN"],
-                **kwargs,
-            )
+    def __init__(self, **kwargs):
+        if kwargs:
+            super().__init__(**kwargs)
 
     def add_attachment(
         self,
