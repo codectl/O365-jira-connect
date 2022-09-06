@@ -36,7 +36,7 @@ class ValidateMetadataFilter(OutlookMessageFilter):
 
             # ignore the message sent when a new comment is added to the issue
             elif soup.head.find("meta", attrs={"content": "relay jira comment"}):
-                IssueSvc.add_message_to_history(message, model=model)
+                issue_s.add_message_to_history(message, model=model)
                 logger.info(
                     "Message filtered as this is a relay message from a Jira comment."
                 )
