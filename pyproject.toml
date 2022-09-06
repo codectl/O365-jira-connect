@@ -40,6 +40,7 @@ coverage = "^6.4.4"
 pre-commit = "^2.20.0"
 pytest = "^7.1.2"
 requests-mock = "^1.10.0"
+pytest-mock = "^3.8.2"
 
 [tool.poetry.scripts]
 O365-connect = "O365_jira_connect:cli"
