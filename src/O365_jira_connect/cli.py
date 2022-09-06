@@ -1,4 +1,5 @@
 import logging
+
 import sys
 
 import click
@@ -21,6 +22,7 @@ from O365_jira_connect.filters import (
     WhitelistFilter,
 )
 from O365_jira_connect.handlers import JiraNotificationHandler
+from O365_jira_connect.services.jira import jira_s
 
 # configure logging
 logging.basicConfig(level=logging.INFO)
@@ -287,13 +289,11 @@ def create_handler(subscriber, **configs):
         ValidateMetadataFilter(),
         WhitelistFilter(whitelist=configs.pop("WHITELIST")),
     ]
-    configs = {
-        "JIRA_ISSUE_TYPE": configs["issue_type"],
-        "JIRA_DEFAULT_LABELS": configs["default_labels"],
-    }
+
+    jira_s.__init__(configs=configs)
+
     return JiraNotificationHandler(
         parent=subscriber,
         namespace=subscriber.namespace,
         filters=filters,
-        configs=configs,
     )
