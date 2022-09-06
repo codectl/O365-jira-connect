@@ -1,4 +1,5 @@
 import logging
+import sys
 
 import click
 import dotenv
@@ -199,9 +200,14 @@ def messages(**_):
 @jira_options
 @messages.command()
 @click.pass_context
-def start_streaming(ctx, connection_timeout, keep_alive_interval, **params):
+def streaming(ctx, connection_timeout, keep_alive_interval, **params):
     """Start streaming connection for handling incoming O365 events."""
-    subscriber = create_subscriber(**ctx.parent.params)
+    parent_params = ctx.parent.params
+    if parent_params["grant_type"] == "credentials":
+        click.echo("Streaming is incompatible with grant type 'credentials'")
+        sys.exit(0)
+
+    subscriber = create_subscriber(**parent_params)
     handler = create_handler(subscriber, **params)
 
     # start listening for streaming events ...
@@ -250,7 +256,6 @@ def authorize_account(
     else:
         logger.info("Authorizing account ...")
         account.authenticate(tenant_id=tenant_id)
-        logger.info("Authorization done.")
     return account
 
 
