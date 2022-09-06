@@ -4,7 +4,7 @@ import logging
 import O365.mailbox
 
 from O365_jira_connect.filters.base import OutlookMessageFilter
-from O365_jira_connect.services import IssueSvc
+from O365_jira_connect.services.issue import issue_s
 
 __all__ = ("RecipientControlFilter",)
 
@@ -41,7 +41,7 @@ class RecipientControlFilter(OutlookMessageFilter):
 
         # check for existing issue
         cid = message.conversation_id
-        existing_issue = IssueSvc.find_one(outlook_conversation_id=cid, _model=True)
+        existing_issue = issue_s.find_one(outlook_conversation_id=cid, _model=True)
 
         if not existing_issue:
             # exclude if new message initiated by the recipient

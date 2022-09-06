@@ -1,7 +1,7 @@
 import logging
 
 from O365_jira_connect.filters.base import OutlookMessageFilter
-from O365_jira_connect.services import IssueSvc
+from O365_jira_connect.services.issue import issue_s
 
 __all__ = ("ValidateMetadataFilter",)
 
@@ -23,11 +23,11 @@ class ValidateMetadataFilter(OutlookMessageFilter):
 
             # append message to history if jira metadata is present
             opts = {"outlook_conversation_id": message.conversation_id, "_model": True}
-            model = IssueSvc.find_one(**opts)
+            model = issue_s.find_one(**opts)
 
             # ignore the notification email sent to user after the creation of an issue
             if soup.head.find("meta", attrs={"content": "jira issue notification"}):
-                IssueSvc.add_message_to_history(message, model=model)
+                issue_s.add_message_to_history(message, model=model)
                 logger.info(
                     "Message filtered as this is a message notification to the user "
                     "about created issue."

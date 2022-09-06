@@ -10,7 +10,7 @@ from O365_notifications.base import O365Notification, O365NotificationHandler
 from O365_notifications.constants import O365EventType, O365Namespace
 
 from O365_jira_connect.filters.base import OutlookMessageFilter
-from O365_jira_connect.services import IssueSvc
+from O365_jira_connect.services.issue import issue_s
 
 __all__ = ("JiraNotificationHandler",)
 
@@ -23,12 +23,10 @@ class JiraNotificationHandler(O365NotificationHandler):
         parent: O365.utils.ApiComponent,
         namespace: O365Namespace,
         filters: list[OutlookMessageFilter] = (),
-        configs: dict = None,
     ):
         self.parent = parent
         self.namespace = namespace
         self.filters = filters
-        self.configs = configs
 
     def process(self, notification: O365Notification):
         """A handler that deals with email notifications.
@@ -53,8 +51,6 @@ class JiraNotificationHandler(O365NotificationHandler):
 
     def process_message(self, message_id):
         """Process a message and create/update an issue."""
-        svc = IssueSvc()
-
         message = self.get_message(message_id, parent=self.parent)
 
         # watchers list
@@ -81,7 +77,7 @@ class JiraNotificationHandler(O365NotificationHandler):
             return
 
         # check for local existing issue
-        existing_issue = svc.find_one(
+        existing_issue = issue_s.find_one(
             outlook_conversation_id=message.conversation_id, _model=True
         )
 
@@ -90,13 +86,13 @@ class JiraNotificationHandler(O365NotificationHandler):
         if existing_issue:
 
             # delete local reference if issue no longer exists in Jira
-            exists = next(iter(svc.find_by(key=existing_issue.key, limit=1)), None)
+            exists = next(iter(issue_s.find_by(key=existing_issue.key, limit=1)), None)
             if not exists:
-                svc.delete(issue_id=existing_issue.id)
+                issue_s.delete(issue_id=existing_issue.id)
 
             # only add comment if not added yet
             if message.object_id not in existing_issue.outlook_messages_id:
-                svc.create_comment(
+                issue_s.create_comment(
                     issue=existing_issue,
                     author=message.sender.address,
                     body=O365.message.bs(message.unique_body, "html.parser").body.text,
@@ -105,7 +101,7 @@ class JiraNotificationHandler(O365NotificationHandler):
                 )
 
                 # append message to history
-                svc.add_message_to_history(message, existing_issue)
+                issue_s.add_message_to_history(message, existing_issue)
 
                 logger.info(f"New comment added on issue '{existing_issue.key}'.")
             else:
@@ -114,8 +110,7 @@ class JiraNotificationHandler(O365NotificationHandler):
         else:
 
             # create issue in Jira and keep local reference
-            issue = svc.create(
-                configs=self.configs,
+            issue = issue_s.create(
                 # Jira fields
                 title=message.subject,
                 body=O365.message.bs(message.unique_body, "html.parser").body.text,
@@ -132,13 +127,13 @@ class JiraNotificationHandler(O365NotificationHandler):
             )
 
             # get local issue reference
-            model = svc.find_one(key=issue["key"], _model=True)
+            model = issue_s.find_one(key=issue["key"], _model=True)
 
             # notify issue reporter about created issue
             notification = self.notify_reporter(message=message, issue_key=model.key)
 
             # append message to history
-            svc.add_message_to_history(message=notification, model=model)
+            issue_s.add_message_to_history(message=notification, model=model)
 
             logger.info(f"New issue created with Jira key '{model.key}'.")
 
@@ -178,7 +173,7 @@ class JiraNotificationHandler(O365NotificationHandler):
         # creating notification message to be sent to all recipients
         markdown = mistune.create_markdown(escape=False)
         body = markdown(
-            IssueSvc.create_message_body(
+            issue_s.create_message_body(
                 template="notification.j2",
                 values={
                     "summary": message.subject,
@@ -210,7 +205,7 @@ class JiraNotificationHandler(O365NotificationHandler):
             reply_body = "\n".join(reply.body.splitlines()[2:])
             style = ""
 
-        body = IssueSvc.create_message_body(
+        body = issue_s.create_message_body(
             template="reply.j2", values={"reply": reply_body, "style": style, **values}
         )
 

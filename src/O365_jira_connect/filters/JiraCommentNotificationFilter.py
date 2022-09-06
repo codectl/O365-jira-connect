@@ -6,9 +6,10 @@ import requests
 import O365.mailbox
 
 from O365_jira_connect import utils
-from O365_jira_connect.services import IssueSvc, JiraSvc
 from O365_jira_connect.filters.base import OutlookMessageFilter
 from O365_jira_connect.handlers import JiraNotificationHandler
+from O365_jira_connect.services.issue import issue_s
+from O365_jira_connect.services.jira import jira_s
 
 __all__ = ("JiraCommentNotificationFilter",)
 
@@ -28,12 +29,8 @@ class JiraCommentNotificationFilter(OutlookMessageFilter):
             return None
 
         if message.sender.address.split("@")[1] == "automation.atlassian.com":
-            svc = JiraSvc()
-
-            # load message json payload
             payload = utils.message_json(message)
-
-            model = IssueSvc.find_one(key=payload["issue"], _model=True)
+            model = issue_s.find_one(key=payload["issue"], _model=True)
             if not model:
                 logger.warning("Comment on issue that was not found.")
                 return None
@@ -48,7 +45,7 @@ class JiraCommentNotificationFilter(OutlookMessageFilter):
             else:
 
                 # locate the specific comment given the
-                comment = svc.comment(
+                comment = jira_s.comment(
                     issue=payload["issue"],
                     comment=payload["id"],
                     expand="renderedBody",
@@ -57,7 +54,7 @@ class JiraCommentNotificationFilter(OutlookMessageFilter):
                 # embed base64 images under RFC2397
                 scheme = "data:image/jpeg;base64"
                 encode = utils.encode_content
-                data = functools.partial(svc.content, base="{server}{path}")
+                data = functools.partial(jira_s.content, base="{server}{path}")
                 body = re.sub(
                     pattern=r'src="(.*?)"',
                     repl=lambda m: f"src='{scheme},{encode(data(path=m.group(1)))}'",
