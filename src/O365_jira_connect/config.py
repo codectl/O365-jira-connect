@@ -27,10 +27,6 @@ class Config:
     JIRA_ISSUE_TYPE = env("JIRA_ISSUE_TYPE", "Task")
     JIRA_ISSUE_DEFAULT_LABELS = env.list("JIRA_ISSUE_DEFAULT_LABELS", [])
 
-    # Jira boards to fetch tickets from
-    JIRA_BOARDS = env.list("JIRA_BOARDS", [])
-    JIRA_DEFAULT_BOARD = env("JIRA_DEFAULT_BOARD", None)
-
     # Streaming connection settings
     # See https://bit.ly/3eqDsGs for details
     CONNECTION_TIMEOUT_IN_MINUTES = env.int("CONNECTION_TIMEOUT_IN_MINUTES", 120)
