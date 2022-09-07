@@ -166,7 +166,7 @@ i18n = ["Babel (>=2.7)"]
 
 [[package]]
 name = "jira"
-version = "3.4.0"
+version = "3.4.1"
 description = "Python library for interacting with JIRA via REST APIs."
 category = "main"
 optional = false
@@ -183,7 +183,7 @@ typing-extensions = ">=3.7.4.2"
 [package.extras]
 async = ["requests-futures (>=0.9.7)"]
 cli = ["ipython (>=4.0.0)", "keyring"]
-docs = ["Sphinx (>=2.2.0)", "sphinx-rtd-theme (>=0.4.3)"]
+docs = ["sphinx (>=5.0.0)", "sphinx-copybutton", "furo"]
 opt = ["filemagic (>=1.6)", "pyjwt", "requests-jwt", "requests-kerberos"]
 test = ["docutils (>=0.12)", "flaky", "MarkupSafe (>=0.23)", "oauthlib", "py (>=1.4)", "pytest-cache", "pytest-cov", "pytest-instafail", "pytest-sugar", "pytest-timeout (>=1.3.1)", "pytest-xdist (>=2.2)", "pytest (>=6.0.0)", "PyYAML (>=5.1)", "requests-mock", "requires.io", "tenacity", "wheel (>=0.24.0)", "xmlrunner (>=1.7.7)", "yanc (>=0.3.3)", "parameterized (>=0.8.1)"]
 
@@ -623,7 +623,7 @@ testing = ["coverage (>=6.2)", "coverage-enable-subprocess (>=1)", "flaky (>=3.7
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "d0adbca883defca2d320173382b7220e8d800d349adf86bd57246499915c6f61"
+content-hash = "1058a97d3322abf637651e73cc5dc5bd8df96880cc72a344170d81bc76d17f17"
 
 [metadata.files]
 attrs = [
@@ -785,8 +785,8 @@ jinja2 = [
     {file = "Jinja2-3.1.2.tar.gz", hash = "sha256:31351a702a408a9e7595a8fc6150fc3f43bb6bf7e319770cbc0db9df9437e852"},
 ]
 jira = [
-    {file = "jira-3.4.0-py3-none-any.whl", hash = "sha256:118278e913232a0040886a052b3035146782bdfa37dd247672dfcc42edf5008c"},
-    {file = "jira-3.4.0.tar.gz", hash = "sha256:dd1f5b8f068b408ffa8d43cb593e5207199f853203ce7c9e46f12c18706b647a"},
+    {file = "jira-3.4.1-py3-none-any.whl", hash = "sha256:9b1286a3eada593bb1c83e12989dc2e7c796867523049fa6a680c3a2757e4d17"},
+    {file = "jira-3.4.1.tar.gz", hash = "sha256:20e2df51cc686f663034543c4dec65783e9c721de6448b433d659d5c95b01c7b"},
 ]
 markupsafe = [
     {file = "MarkupSafe-2.1.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:86b1f75c4e7c2ac2ccdaec2b9022845dbb81880ca318bb7a0a01fbf7813e3812"},
