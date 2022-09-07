@@ -1,0 +1,3 @@
+class TestIssueSvc:
+
+    pass
