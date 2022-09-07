@@ -49,36 +49,6 @@ class ProxyJIRA(JIRA):
                 data["permissions"][p]["havePermission"] for p in permissions
             )
 
-    def my_permissions(
-        self,
-        project_key=None,
-        project_id=None,
-        issue_key=None,
-        issue_id=None,
-        permissions=None,
-    ):
-        """Override.
-
-        :param project_key: see overridden method
-        :param project_id: see overridden method
-        :param issue_key: see overridden method
-        :param issue_id: see overridden method
-        :param permissions: limit returned permissions to the specified permissions.
-                            Change introduce by Jira as per early 2020.
-        """
-        params = {}
-        if project_key is not None:
-            params["projectKey"] = project_key
-        if project_id is not None:
-            params["projectId"] = project_id
-        if issue_key is not None:
-            params["issueKey"] = issue_key
-        if issue_id is not None:
-            params["issueId"] = issue_id
-        if permissions is not None:
-            params["permissions"] = permissions
-        return self._get_json("mypermissions", params=params)
-
     def board_configuration(self, board_id) -> dict:
         """Get the configuration from a given board
 
@@ -209,7 +179,7 @@ class JiraSvc(ProxyJIRA):
         :param watchers:
         """
         # add watchers iff has permission
-        if self.has_permissions(permissions=["MANAGE_WATCHERS"], issue_key=str(issue)):
+        if self.has_permissions(permissions=["MANAGE_WATCHERS"]):
             for watcher in watchers or []:
                 if isinstance(watcher, jira.User):
                     try:
