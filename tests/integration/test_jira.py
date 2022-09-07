@@ -25,7 +25,7 @@ class TestJiraSvc:
     def test_exists_issue(self, jira_s, project, issue_type):
         issue = jira_s.create_issue(
             summary="Yet another dummy issue",
-            project=project,
+            project=project.key,
             issuetype=issue_type,
         )
         assert jira_s.exists_issue(issue.id) is True
@@ -44,6 +44,7 @@ class TestJiraSvc:
         file.seek(0)
         file = O365.message.MessageAttachment(protocol=protocol, attachment=file.name)
         attachment = jira_s.add_attachment(issue=issue, attachment=file)
+        issue = jira_s.issue(id=issue.id)  # reload issue
         assert len(issue.fields.attachment) == 1
         assert issue.fields.attachment[0].id == attachment.id
         assert jira_s.attachment(id=attachment.id).get() == b"some dummy data"
