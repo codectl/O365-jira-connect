@@ -3,10 +3,16 @@ import os
 import jira
 import pytest
 
+from O365_jira_connect.services.issue import IssueSvc
 from O365_jira_connect.services.jira import JiraSvc
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
+def issue_s():
+    return IssueSvc()
+
+
+@pytest.fixture(scope="session")
 def jira_s():
     return JiraSvc(
         server=os.environ["JIRA_PLATFORM_URL"],
@@ -17,7 +23,7 @@ def jira_s():
     )
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def project(jira_s):
     try:
         jira_s.create_project(key="UT", name="UNITTESTS")
@@ -33,6 +39,6 @@ def project(jira_s):
     jira_s.delete_project(project)
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="session")
 def issue_type(jira_s):
     return os.environ.get("JIRA_ISSUE_TYPE", "Task")
