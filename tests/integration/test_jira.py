@@ -54,3 +54,8 @@ class TestJiraSvc:
         watchers = jira_s.watchers(issue=issue)
         assert watchers.watchCount == 2
         assert watchers.watchers[0].accountId == guest_user.accountId
+
+    def test_resolve_email(self, jira_s, guest_user):
+        user = jira_s.resolve_email(email="guest@example.com")
+        assert user.accountId == guest_user.accountId
+        assert jira_s.resolve_email("xyz@email.com") == "xyz@email.com"
