@@ -6,6 +6,7 @@ import typing
 import jinja2
 import O365
 
+from O365_jira_connect import __file__ as pkg
 from O365_jira_connect.components import with_session
 from O365_jira_connect.models import Issue
 from O365_jira_connect.services.jira import jira_s
@@ -267,8 +268,11 @@ class IssueSvc:
         """
         if not template:
             return None
+        elif not template.endswith(".j2"):
+            template = f"{template}.j2"
 
-        template_path = os.path.join(__package__, "templates", "messages")
+        pkg_path = os.path.dirname(pkg)
+        template_path = os.path.join(pkg_path, "templates", "messages")
         template_filepath = os.path.join(template_path, template)
         if not os.path.exists(template_filepath):
             raise ValueError("Invalid template provided")
