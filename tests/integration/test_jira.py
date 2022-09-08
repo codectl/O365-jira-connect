@@ -58,3 +58,4 @@ class TestJiraSvc:
         user = jira_s.resolve_email(email="guest@example.com")
         assert user.accountId == guest_user.accountId
         assert jira_s.resolve_email("xyz@email.com") == "xyz@email.com"
+        assert jira_s.resolve_email(email="") is None
