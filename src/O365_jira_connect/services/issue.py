@@ -271,17 +271,15 @@ class IssueSvc:
         elif not template.endswith(".j2"):
             template = f"{template}.j2"
 
-        pkg_path = os.path.dirname(pkg)
-        template_path = os.path.join(pkg_path, "templates", "messages")
-        template_filepath = os.path.join(template_path, template)
-        if not os.path.exists(template_filepath):
-            raise ValueError("invalid template provided")
-
-        with open(template_filepath) as file:
-            content = file.read()
-
-        template_cls = jinja2.Template(content, trim_blocks=True, lstrip_blocks=True)
-        return template_cls.render(**values)
+        templates_path = os.path.join(os.path.dirname(pkg), "templates", "messages")
+        loader = jinja2.FileSystemLoader(searchpath=templates_path)
+        env = jinja2.Environment(
+            loader=loader,
+            autoescape=jinja2.select_autoescape(),
+            trim_blocks=True,
+            lstrip_blocks=True,
+        )
+        return env.get_template(template).render(**values)
 
 
 # global instance service
