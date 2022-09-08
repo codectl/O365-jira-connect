@@ -35,7 +35,7 @@ class TestIssueSvc:
         )
         assert "Dear User" in body
         assert f"the issue [UT-123]({url}) was created." in body
-        assert f"track the progress of the issue [here]({url}) was created." in body
+        assert f"track the progress of the issue [here]({url})" in body
 
     def test_create_message_body_with_reply_template(self, issue_s):
         body = issue_s.create_message_body(
