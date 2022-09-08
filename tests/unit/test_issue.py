@@ -1,3 +1,4 @@
+import jinja2.exceptions
 import pytest
 
 from O365_jira_connect.services.issue import IssueSvc
@@ -49,3 +50,7 @@ class TestIssueSvc:
         )
         assert "some generic body issue" in body
         assert "this is a message reply" in body
+
+    def test_missing_template_raises_exception(self, issue_s):
+        with pytest.raises(jinja2.exceptions.TemplateNotFound):
+            issue_s.create_message_body(template="missing", values={})
