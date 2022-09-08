@@ -275,12 +275,13 @@ class IssueSvc:
         template_path = os.path.join(pkg_path, "templates", "messages")
         template_filepath = os.path.join(template_path, template)
         if not os.path.exists(template_filepath):
-            raise ValueError("Invalid template provided")
+            raise ValueError("invalid template provided")
 
         with open(template_filepath) as file:
             content = file.read()
 
-        return jinja2.Template(content).render(**values)
+        template_cls = jinja2.Template(content, trim_blocks=True, lstrip_blocks=True)
+        return template_cls.render(**values)
 
 
 # global instance service
