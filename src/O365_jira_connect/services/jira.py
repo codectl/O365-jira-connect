@@ -201,7 +201,8 @@ class JiraSvc(ProxyJIRA):
 
     def resolve_email(self, email) -> typing.Union[jira.resources.User, str]:
         """Translation given email into Jira user."""
-        return next(iter(self.search_users(query=email, maxResults=1)), email)
+        users = self.search_users(query=email, maxResults=1) if email else []
+        return next(iter(users), email)
 
 
 # global instance service
