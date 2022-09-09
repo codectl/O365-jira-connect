@@ -132,7 +132,7 @@ class JiraMarkdown(ProxyJIRA):
         if isinstance(user, jira.User):
             return f"[~accountid:{user.accountId}]"
         elif isinstance(user, str):
-            return "".join(("[", user, ";|", "mailto:", user, "]"))
+            return f"[{user};|mailto:{user}]"
         else:
             return None
 
