@@ -3,7 +3,7 @@ import datetime
 import jira.resources
 from sqlalchemy import ARRAY, Column, DateTime, Float, Integer, String
 
-from O365_jira_connect.components import Base
+from O365_jira_connect.session import Base
 
 
 class AccessToken(Base):

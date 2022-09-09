@@ -7,8 +7,8 @@ import jinja2
 import O365
 
 from O365_jira_connect import __file__ as pkg
-from O365_jira_connect.components import with_session
 from O365_jira_connect.models import Issue
+from O365_jira_connect.session import with_session
 
 __all__ = ("IssueSvc",)
 

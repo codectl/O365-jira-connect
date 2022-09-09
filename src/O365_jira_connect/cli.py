@@ -13,7 +13,6 @@ from O365_notifications.streaming import O365StreamingSubscriber
 from O365_notifications.constants import O365EventType
 
 from O365_jira_connect.backend import DatabaseTokenBackend
-from O365_jira_connect.components import init_engine
 from O365_jira_connect.filters import (
     BlacklistFilter,
     JiraCommentNotificationFilter,
@@ -22,6 +21,7 @@ from O365_jira_connect.filters import (
     WhitelistFilter,
 )
 from O365_jira_connect.handlers import JiraNotificationHandler
+from O365_jira_connect.session import init_engine
 
 # configure logging
 logging.basicConfig(level=logging.INFO)
