@@ -1,13 +1,8 @@
 import logging
-
 import sys
 
 import click
-from O365 import (
-    Account,
-    MSGraphProtocol,
-    MSOffice365Protocol,
-)
+import O365
 from O365_notifications.streaming import O365StreamingSubscriber
 from O365_notifications.constants import O365EventType
 
@@ -235,15 +230,15 @@ def authorize_account(
 ):
     kwargs = {"api_version": api_version} if api_version else {}
     if protocol == "graph":
-        protocol = MSGraphProtocol(**kwargs)
+        protocol = O365.MSGraphProtocol(**kwargs)
     elif protocol == "office":
-        protocol = MSOffice365Protocol(**kwargs)
+        protocol = O365.MSOffice365Protocol(**kwargs)
 
     # ignore scopes on 'credentials' flow
     if scopes and grant_type == "credentials":
         scopes = None
 
-    account = Account(
+    account = O365.Account(
         credentials=(client_id, client_secret),
         protocol=protocol,
         tenant_id=tenant_id,
