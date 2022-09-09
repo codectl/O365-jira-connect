@@ -8,11 +8,6 @@ from O365_jira_connect.services.jira import JiraSvc
 
 
 @pytest.fixture(scope="session")
-def issue_s():
-    return IssueSvc()
-
-
-@pytest.fixture(scope="session")
 def jira_s():
     return JiraSvc(
         server=os.environ["JIRA_PLATFORM_URL"],
@@ -21,6 +16,11 @@ def jira_s():
             os.environ["JIRA_PLATFORM_TOKEN"],
         ),
     )
+
+
+@pytest.fixture(scope="session")
+def issue_s(jira_s):
+    return IssueSvc(jira=jira_s)
 
 
 @pytest.fixture(scope="session")
