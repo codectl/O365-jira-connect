@@ -9,17 +9,18 @@ import O365
 from O365_jira_connect import __file__ as pkg
 from O365_jira_connect.components import with_session
 from O365_jira_connect.models import Issue
-from O365_jira_connect.services.jira import jira_s
 
-__all__ = ("IssueSvc", "issue_s")
+__all__ = ("IssueSvc",)
 
 logger = logging.getLogger(__name__)
 
 
 class IssueSvc:
-    @classmethod
+    def __init__(self, jira=None):
+        self.jira = jira
+
     @with_session
-    def create(cls, session=None, attachments: list = None, **kwargs) -> Issue:
+    def create(self, session=None, attachments: list = None, **kwargs) -> Issue:
         """Create a new issue by calling Jira API to create a new
         issue. A new local reference to the issue is also created.
 
@@ -36,18 +37,18 @@ class IssueSvc:
             watchers: user emails to watch for issue changes
         """
         # translate emails into jira.User objects, if possible
-        reporter_kw = kwargs.get("reporter")
-        watchers_kw = kwargs.get("watchers")
-        reporter = jira_s.resolve_email(email=reporter_kw) or reporter_kw
-        watchers = [jira_s.resolve_email(email=email) for email in watchers_kw or []]
+        reporter_kw = kwargs["reporter"]
+        watchers_kw = kwargs.get("watchers", [])
+        reporter = self.jira.resolve_email(email=reporter_kw) or reporter_kw
+        watchers = [self.jira.resolve_email(email=email) for email in watchers_kw]
 
         # create issue body with Jira markdown format
-        body = cls.create_message_body(
+        body = self.create_message_body(
             template="jira.j2",
             values={
-                "author": jira_s.markdown.mention(user=reporter),
-                "cc": " ".join(jira_s.markdown.mention(user=w) for w in watchers),
-                "body": kwargs.get("body"),
+                "author": self.jira.markdown.mention(user=reporter),
+                "cc": " ".join(self.jira.markdown.mention(user=w) for w in watchers),
+                "body": kwargs["body"],
             },
         )
 
@@ -55,29 +56,28 @@ class IssueSvc:
         reporter_id = getattr(reporter, "accountId", None)
 
         # set defaults
-        board = next(b for b in jira_s.boards() if b.key == kwargs.get("board"))
         priority_opt = ["high", "low"]
         priority = (kwargs.get("priority") or "").lower()
         priority = {"name": priority.capitalize()} if priority in priority_opt else None
-        labels = kwargs.get("labels", []) + jira_s.configs["JIRA_DEFAULT_LABELS"]
+        labels = kwargs.get("labels", []) + self.jira.configs["JIRA_DEFAULT_LABELS"]
 
         # create ticket in Jira
-        issue = jira_s.create_issue(
+        issue = self.jira.create_issue(
             summary=kwargs.get("title"),
             description=body,
             reporter={"id": reporter_id},
-            project={"key": board.project},
-            issuetype={"name": jira_s.configs["JIRA_ISSUE_TYPE"]},
+            project={"key": kwargs["project"]},
+            issuetype={"name": self.jira.configs["JIRA_ISSUE_TYPE"]},
             labels=labels,
             **{"priority": priority} if priority else {},
         )
 
         # add watchers
-        jira_s.add_watchers(issue=issue, watchers=watchers)
+        self.jira.add_watchers(issue=issue, watchers=watchers)
 
         # adding attachments
         for attachment in attachments or []:
-            jira_s.add_attachment(issue=issue, attachment=attachment)
+            self.jira.add_attachment(issue=issue, attachment=attachment)
 
         # add new entry to the db
         local_fields = {k: v for k, v in kwargs.items() if k in Issue.__dict__}
@@ -88,22 +88,20 @@ class IssueSvc:
 
         logger.info(f"Created issue '{issue.key}'.")
 
-        return cls.find_one(key=issue.key)
+        return self.find_one(key=issue.key)
 
     @staticmethod
     @with_session
     def get(ticket_id, session=None) -> typing.Optional[Issue]:
         return session.query(Issue).get(ticket_id)
 
-    @classmethod
-    def find_one(cls, **filters) -> typing.Optional[Issue]:
+    def find_one(self, **filters) -> typing.Optional[Issue]:
         """Search for a single ticket based on several criteria."""
-        return next(iter(cls.find_by(limit=1, **filters)), None)
+        return next(iter(self.find_by(limit=1, **filters)), None)
 
-    @classmethod
     @with_session
     def find_by(
-        cls,
+        self,
         session=None,
         limit: int = 20,
         fields: list = None,
@@ -149,7 +147,7 @@ class IssueSvc:
 
             # fetch tickets from Jira using jql while skipping jql
             # validation since local db might not be synched with Jira
-            query = jira_s.create_jql_query(
+            query = self.jira.create_jql_query(
                 summary=filters.pop("q", None),
                 **jira_filters,
             )
@@ -162,7 +160,7 @@ class IssueSvc:
 
             issues = []  # container for issues result
 
-            jira_issues = jira_s.search_issues(
+            jira_issues = self.jira.search_issues(
                 jql_str=query,
                 maxResults=limit,
                 validate_query=False,
@@ -171,7 +169,7 @@ class IssueSvc:
             )
 
             for jira_issue in jira_issues:
-                issue = cls.find_one(key=jira_issue.key, _model=True)
+                issue = self.jira.find_one(key=jira_issue.key, _model=True)
 
                 # prevent cases where local db is not synched with Jira
                 # for cases where Jira tickets are not yet locally present
@@ -180,7 +178,7 @@ class IssueSvc:
 
                     # add watchers if requested
                     if "watchers" in fields:
-                        watchers = jira_s.watchers(jira_issue.key)
+                        watchers = self.jira.watchers(jira_issue.key)
                         issue.jira_issue.raw["watchers"] = watchers.raw["watchers"]
 
                     issues.append(issue)
@@ -219,9 +217,8 @@ class IssueSvc:
                 updated_at=datetime.datetime.utcnow(),
             )
 
-    @classmethod
     def create_comment(
-        cls,
+        self,
         issue: typing.Union[Issue, str],
         author: str,
         body: str,
@@ -238,26 +235,26 @@ class IssueSvc:
                             are stored in Jira
         """
         # translate watchers into jira.User objects iff exists
-        watchers = [jira_s.resolve_email(email=email) for email in watchers or []]
+        watchers = [self.jira.resolve_email(email=email) for email in watchers or []]
 
-        body = cls.create_message_body(
+        body = self.create_message_body(
             template="jira.j2",
             values={
-                "author": jira_s.markdown.mention(user=author),
+                "author": self.jira.markdown.mention(user=author),
                 "cc": " ".join(
-                    jira_s.markdown.mention(user=watcher) for watcher in watchers
+                    self.jira.markdown.mention(user=watcher) for watcher in watchers
                 ),
                 "body": body,
             },
         )
-        jira_s.add_comment(issue=issue, body=body, is_internal=True)
+        self.jira.add_comment(issue=issue, body=body, is_internal=True)
 
         # add watchers
-        jira_s.add_watchers(issue=issue, watchers=watchers)
+        self.jira.add_watchers(issue=issue, watchers=watchers)
 
         # adding attachments
         for attachment in attachments or []:
-            jira_s.add_attachment(issue=issue, attachment=attachment)
+            self.jira.add_attachment(issue=issue, attachment=attachment)
 
     @staticmethod
     def create_message_body(template=None, values=None) -> typing.Optional[str]:
@@ -280,7 +277,3 @@ class IssueSvc:
             lstrip_blocks=True,
         )
         return env.get_template(template).render(**values)
-
-
-# global instance service
-issue_s = IssueSvc()

@@ -1,5 +1,4 @@
 import logging
-import os
 
 import sys
 
@@ -23,7 +22,6 @@ from O365_jira_connect.filters import (
     WhitelistFilter,
 )
 from O365_jira_connect.handlers import JiraNotificationHandler
-from O365_jira_connect.services.jira import jira_s
 
 # configure logging
 logging.basicConfig(level=logging.INFO)
@@ -290,15 +288,6 @@ def create_handler(subscriber, **configs):
         ValidateMetadataFilter(),
         WhitelistFilter(whitelist=configs.pop("WHITELIST")),
     ]
-
-    # parametrize jira
-    jira_s.__init__(
-        server=os.environ["JIRA_PLATFORM_URL"],
-        basic_auth=(
-            os.environ["JIRA_PLATFORM_USER"],
-            os.environ["JIRA_PLATFORM_TOKEN"],
-        ),
-    )
 
     return JiraNotificationHandler(
         parent=subscriber,

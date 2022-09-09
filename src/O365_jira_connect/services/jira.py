@@ -1,6 +1,7 @@
 import base64
 import io
 import logging
+import os
 import tempfile
 import typing
 
@@ -11,7 +12,7 @@ from jira import JIRA
 
 from O365_jira_connect.models import Issue
 
-__all__ = ("JiraSvc", "jira_s")
+__all__ = ("JiraSvc",)
 
 logger = logging.getLogger(__name__)
 
@@ -140,8 +141,17 @@ class JiraSvc(ProxyJIRA):
     """Service to handle Jira operations."""
 
     def __init__(self, **kwargs):
-        if kwargs:
-            super().__init__(**kwargs)
+        super().__init__(
+            server=kwargs.pop("server", os.environ["JIRA_PLATFORM_URL"]),
+            basic_auth=kwargs.pop(
+                "basic_auth",
+                (
+                    os.environ["JIRA_PLATFORM_USER"],
+                    os.environ["JIRA_PLATFORM_TOKEN"],
+                ),
+            )
+            ** kwargs,
+        )
 
     def add_attachment(
         self,
@@ -203,7 +213,3 @@ class JiraSvc(ProxyJIRA):
         """Translation given email into Jira user."""
         users = self.search_users(query=email, maxResults=1) if email else []
         return next(iter(users), email)
-
-
-# global instance service
-jira_s = JiraSvc()
