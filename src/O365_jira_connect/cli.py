@@ -283,5 +283,9 @@ def create_handler(subscriber, **configs):
     ]
 
     return JiraNotificationHandler(
-        parent=subscriber, namespace=subscriber.namespace, filters=filters, **configs
+        parent=subscriber,
+        namespace=subscriber.namespace,
+        filters=filters,
+        issue_type=configs["issue_type"],
+        default_labels=configs["default_labels"],
     )
