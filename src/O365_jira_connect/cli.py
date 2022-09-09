@@ -275,15 +275,13 @@ def create_handler(subscriber, **configs):
     resources = [sub.resource for sub in subscriber.subscriptions]
     main_resource = subscriber.main_resource
     filters = [
-        BlacklistFilter(blacklist=configs.pop("BLACKLIST")),
+        BlacklistFilter(blacklist=configs.pop("blacklist")),
         JiraCommentNotificationFilter(folder=resources[0]),
         RecipientControlFilter(email=main_resource, ignore=[resources[1]]),
         ValidateMetadataFilter(),
-        WhitelistFilter(whitelist=configs.pop("WHITELIST")),
+        WhitelistFilter(whitelist=configs.pop("whitelist")),
     ]
 
     return JiraNotificationHandler(
-        parent=subscriber,
-        namespace=subscriber.namespace,
-        filters=filters,
+        parent=subscriber, namespace=subscriber.namespace, filters=filters, **configs
     )

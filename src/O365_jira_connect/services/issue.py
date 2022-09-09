@@ -7,6 +7,7 @@ import jinja2
 import O365
 
 from O365_jira_connect import __file__ as pkg
+from O365_jira_connect.env import env
 from O365_jira_connect.models import Issue
 from O365_jira_connect.session import with_session
 
@@ -16,8 +17,12 @@ logger = logging.getLogger(__name__)
 
 
 class IssueSvc:
-    def __init__(self, jira=None):
+    def __init__(self, jira=None, configs=None):
         self.jira = jira
+        self.configs = configs or {
+            "issue_type": env.str("JIRA_ISSUE_TYPE", None),
+            "default_labels": env.list("JIRA_DEFAULT_LABELS", [], delimiter=" "),
+        }
 
     @with_session
     def create(self, session=None, attachments: list = None, **kwargs) -> Issue:
@@ -59,7 +64,7 @@ class IssueSvc:
         priority_opt = ["high", "low"]
         priority = (kwargs.get("priority") or "").lower()
         priority = {"name": priority.capitalize()} if priority in priority_opt else None
-        labels = kwargs.get("labels", []) + self.jira.configs["JIRA_DEFAULT_LABELS"]
+        labels = kwargs.get("labels", []) + self.configs["default_labels"]
 
         # create ticket in Jira
         issue = self.jira.create_issue(
@@ -67,7 +72,7 @@ class IssueSvc:
             description=body,
             reporter={"id": reporter_id},
             project={"key": kwargs["project"]},
-            issuetype={"name": self.jira.configs["JIRA_ISSUE_TYPE"]},
+            issuetype={"name": self.configs["issue_type"]},
             labels=labels,
             **{"priority": priority} if priority else {},
         )

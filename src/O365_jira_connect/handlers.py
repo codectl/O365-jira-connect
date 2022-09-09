@@ -23,10 +23,12 @@ class JiraNotificationHandler(O365NotificationHandler):
         parent: O365.utils.ApiComponent,
         namespace: O365Namespace,
         filters: list[OutlookMessageFilter] = (),
+        **configs,
     ):
         self.parent = parent
         self.namespace = namespace
         self.filters = filters
+        issue_s.configs.update(configs)
 
     def process(self, notification: O365Notification):
         """A handler that deals with email notifications.
