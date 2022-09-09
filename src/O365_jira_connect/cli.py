@@ -3,7 +3,6 @@ import logging
 import sys
 
 import click
-import dotenv
 from O365 import (
     Account,
     MSGraphProtocol,
@@ -26,9 +25,6 @@ from O365_jira_connect.session import init_engine
 # configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# load environment if exists
-dotenv.load_dotenv(".env")
 
 
 @click.option("--debug/--no-debug", default=False, help="Enable debug")
