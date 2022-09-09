@@ -1,7 +1,6 @@
 import base64
 import io
 import logging
-import os
 import tempfile
 import typing
 
@@ -10,6 +9,7 @@ import O365
 import requests
 from jira import JIRA
 
+from O365_jira_connect.env import env
 from O365_jira_connect.models import Issue
 
 __all__ = ("JiraSvc",)
@@ -142,12 +142,12 @@ class JiraSvc(ProxyJIRA):
 
     def __init__(self, **kwargs):
         super().__init__(
-            server=kwargs.pop("server", os.environ["JIRA_PLATFORM_URL"]),
+            server=kwargs.pop("server", env.str("JIRA_PLATFORM_URL")),
             basic_auth=kwargs.pop(
                 "basic_auth",
                 (
-                    os.environ["JIRA_PLATFORM_USER"],
-                    os.environ["JIRA_PLATFORM_TOKEN"],
+                    env.str("JIRA_PLATFORM_USER"),
+                    env.str("JIRA_PLATFORM_TOKEN"),
                 ),
             )
             ** kwargs,
