@@ -10,7 +10,7 @@ from O365_notifications.base import O365Notification, O365NotificationHandler
 from O365_notifications.constants import O365EventType, O365Namespace
 
 from O365_jira_connect.filters.base import OutlookMessageFilter
-from O365_jira_connect.services.issue import issue_s
+from O365_jira_connect.services import issue_s
 
 __all__ = ("JiraNotificationHandler",)
 

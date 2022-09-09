@@ -8,8 +8,7 @@ import O365.mailbox
 from O365_jira_connect import utils
 from O365_jira_connect.filters.base import OutlookMessageFilter
 from O365_jira_connect.handlers import JiraNotificationHandler
-from O365_jira_connect.services.issue import issue_s
-from O365_jira_connect.services.jira import jira_s
+from O365_jira_connect.services import issue_s, jira_s
 
 __all__ = ("JiraCommentNotificationFilter",)
 

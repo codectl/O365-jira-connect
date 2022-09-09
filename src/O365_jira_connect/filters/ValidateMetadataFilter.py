@@ -1,7 +1,7 @@
 import logging
 
 from O365_jira_connect.filters.base import OutlookMessageFilter
-from O365_jira_connect.services.issue import issue_s
+from O365_jira_connect.services import issue_s
 
 __all__ = ("ValidateMetadataFilter",)
 
