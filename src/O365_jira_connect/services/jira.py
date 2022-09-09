@@ -149,8 +149,8 @@ class JiraSvc(ProxyJIRA):
                     env.str("JIRA_PLATFORM_USER"),
                     env.str("JIRA_PLATFORM_TOKEN"),
                 ),
-            )
-            ** kwargs,
+            ),
+            **kwargs,
         )
 
     def add_attachment(
