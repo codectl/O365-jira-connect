@@ -20,6 +20,7 @@ class IssueSvc:
     def __init__(self, jira=None, configs=None):
         self.jira = jira
         self.configs = configs or {
+            "project_key": env.str("JIRA_PROJECT_KEY", None),
             "issue_type": env.str("JIRA_ISSUE_TYPE", None),
             "default_labels": env.list("JIRA_DEFAULT_LABELS", [], delimiter=" "),
         }
@@ -71,7 +72,7 @@ class IssueSvc:
             summary=kwargs.get("title"),
             description=body,
             reporter={"id": reporter_id},
-            project={"key": kwargs["project"]},
+            project={"key": self.configs["project_key"]},
             issuetype={"name": self.configs["issue_type"]},
             labels=labels,
             **{"priority": priority} if priority else {},
