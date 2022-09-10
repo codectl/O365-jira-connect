@@ -12,7 +12,7 @@ from jira import JIRA
 from O365_jira_connect.env import env
 from O365_jira_connect.models import Issue
 
-__all__ = ("JiraSvc",)
+__all__ = ("AtlassianDF", "AtlassianMarkdown", "JiraSvc")
 
 logger = logging.getLogger(__name__)
 
@@ -116,66 +116,6 @@ class ProxyJIRA(JIRA):
         return AtlassianMarkdown(parent=self)
 
 
-class AtlassianMarkdown(ProxyJIRA):
-    def __init__(self, parent=None, **kwargs):
-        if parent and isinstance(parent, ProxyJIRA):
-            self.__dict__.update(parent.__dict__)
-        else:
-            super().__init__(**kwargs)
-
-    @staticmethod
-    def mention(user):
-        """Create Jira markdown mention out of a user.
-
-        If user does not exist, create email markdown.
-        """
-        if isinstance(user, jira.User):
-            return f"[~accountid:{user.accountId}]"
-        elif isinstance(user, str):
-            return f"[{user};|mailto:{user}]"
-        else:
-            return None
-
-
-class ADF:
-    # Atlassian Document Format.
-    # see https://bit.ly/3eJhy3G for documentation
-
-    class Node:
-        def __init__(
-            self,
-            t: str,
-            text: str = None,
-            attrs: dict = None,
-            marks: list[dict] = (),
-            content: list = (),  # list[Node]
-        ):
-            self.type = t
-            self.text = text
-            self.attrs = attrs or {}
-            self.marks = marks
-            self.content = content
-
-    def __init__(self):
-        self.document = {"version": 1, "type": "doc", "content": []}
-
-    def node(self, parent=None, **kwargs):
-        parent = parent or self.document
-        node = self.Node(**kwargs)
-        parent.content.append(node)
-        return node
-
-    def normalize(self, node=None):
-        node = node or self.document
-        if not node.content:
-            return {node.__dict__}
-        else:
-            return {
-                **node.__dict__,
-                "content": [self.normalize(content) for content in node.content],
-            }
-
-
 class JiraSvc(ProxyJIRA):
     """Service to handle Jira operations."""
 
@@ -252,3 +192,63 @@ class JiraSvc(ProxyJIRA):
         """Translation given email into Jira user."""
         users = self.search_users(query=email, maxResults=1) if email else []
         return next(iter(users), email)
+
+
+class AtlassianMarkdown:
+    def __init__(self, parent=None, **kwargs):
+        if parent and isinstance(parent, ProxyJIRA):
+            self.__dict__.update(parent.__dict__)
+        else:
+            super().__init__(**kwargs)
+
+    @staticmethod
+    def mention(user):
+        """Create Jira markdown mention out of a user.
+        If user does not exist, use given email.
+        """
+        if isinstance(user, jira.User):
+            return f"[~accountid:{user.accountId}]"
+        elif isinstance(user, str):
+            return f"[{user};|mailto:{user}]"
+        else:
+            return None
+
+
+class AtlassianDF:
+    """Atlassian Document Format.
+    see https://bit.ly/3eJhy3G for documentation
+    """
+
+    class Node:
+        def __init__(
+            self,
+            t: str,
+            text: str = None,
+            attrs: dict = None,
+            marks: list[dict] = (),
+            content: list = (),  # list[Node]
+        ):
+            self.type = t
+            self.text = text
+            self.attrs = attrs or {}
+            self.marks = marks
+            self.content = content
+
+    def __init__(self):
+        self.document = {"version": 1, "type": "doc", "content": []}
+
+    def node(self, parent=None, **kwargs):
+        parent = parent or self.document
+        node = self.Node(**kwargs)
+        parent.content.append(node)
+        return node
+
+    def normalize(self, node=None):
+        node = node or self.document
+        if not node.content:
+            return {node.__dict__}
+        else:
+            return {
+                **node.__dict__,
+                "content": [self.normalize(content) for content in node.content],
+            }
