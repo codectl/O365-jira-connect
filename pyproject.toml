@@ -32,6 +32,7 @@ jira = "^3.4.1"
 mistune = "^2.0.4"
 O365 = "^2.0.20"
 O365-notifications = "^0.1.1"
+pyadf = "^0.2.29"
 python = "^3.9"
 SQLAlchemy = "^1.4.40"
 
