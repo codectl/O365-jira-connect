@@ -214,33 +214,30 @@ class AtlassianDF:
     """
 
     class Node:
-        def __init__(
-            self,
-            t: str,
-            text: str = None,
-            attrs: dict = None,
-            marks: list[dict] = (),
-            content: list = (),  # list[Node]
-        ):
+        def __init__(self, t: str, content: list = (), **kwargs):
             self.type = t
-            self.text = text
-            self.attrs = attrs or {}
-            self.marks = marks
-            self.content = content
+            self.content = content or []
+            for kw in kwargs:
+                setattr(self, kw, kwargs[kw])
+
+        def node(self, **kwargs):
+            node = self.__class__(**kwargs)
+            self.content.append(node)
+            return node
+
+        def __str__(self):
+            return f"<Node '{self.type}'>"
 
     def __init__(self):
-        self.document = {"version": 1, "type": "doc", "content": []}
+        self.doc = self.Node(version=1, t="doc", content=[])
 
-    def node(self, parent=None, **kwargs):
-        parent = parent or self.document
-        node = self.Node(**kwargs)
-        parent.content.append(node)
-        return node
+    def node(self, **kwargs):
+        return self.doc.node(**kwargs)
 
-    def normalize(self, node=None):
-        node = node or self.document
+    def normalize(self, _node=None):
+        node = _node or self.doc
         if not node.content:
-            return {node.__dict__}
+            return {k: v for k, v in node.__dict__.items() if v}
         else:
             return {
                 **node.__dict__,
