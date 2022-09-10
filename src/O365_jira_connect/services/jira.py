@@ -113,7 +113,7 @@ class ProxyJIRA(JIRA):
 
     @property
     def markdown(self):
-        return AtlassianMarkdown(parent=self)
+        return AtlassianMarkdown()
 
 
 class JiraSvc(ProxyJIRA):
@@ -195,12 +195,6 @@ class JiraSvc(ProxyJIRA):
 
 
 class AtlassianMarkdown:
-    def __init__(self, parent=None, **kwargs):
-        if parent and isinstance(parent, ProxyJIRA):
-            self.__dict__.update(parent.__dict__)
-        else:
-            super().__init__(**kwargs)
-
     @staticmethod
     def mention(user):
         """Create Jira markdown mention out of a user.
