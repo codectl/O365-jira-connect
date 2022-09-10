@@ -3,7 +3,7 @@ import pytest
 import requests
 import requests_mock
 
-from O365_jira_connect.services.jira import JiraSvc
+from O365_jira_connect.services.jira import AtlassianDF, JiraSvc
 
 
 @pytest.fixture
@@ -77,3 +77,18 @@ class TestJiraSvc:
         user = jira.User({}, jira_s._session, raw={"self": {}, "accountId": "123"})
         assert jira_s.markdown.mention(email) == f"[{email};|mailto:{email}]"
         assert jira_s.markdown.mention(user) == "[~accountid:123]"
+
+    def test_document_format(self):
+        doc = AtlassianDF()
+        doc.node(t="paragraph").node(t="text", text="dummy text")
+        norm = doc.normalize()
+        assert norm == {
+            "version": 1,
+            "type": "doc",
+            "content": [
+                {
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": "dummy text"}],
+                }
+            ],
+        }
