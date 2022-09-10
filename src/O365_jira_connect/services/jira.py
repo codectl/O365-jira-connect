@@ -113,10 +113,10 @@ class ProxyJIRA(JIRA):
 
     @property
     def markdown(self):
-        return JiraMarkdown(parent=self)
+        return AtlassianMarkdown(parent=self)
 
 
-class JiraMarkdown(ProxyJIRA):
+class AtlassianMarkdown(ProxyJIRA):
     def __init__(self, parent=None, **kwargs):
         if parent and isinstance(parent, ProxyJIRA):
             self.__dict__.update(parent.__dict__)
@@ -135,6 +135,45 @@ class JiraMarkdown(ProxyJIRA):
             return f"[{user};|mailto:{user}]"
         else:
             return None
+
+
+class ADF:
+    # Atlassian Document Format.
+    # see https://bit.ly/3eJhy3G for documentation
+
+    class Node:
+        def __init__(
+            self,
+            t: str,
+            text: str = None,
+            attrs: dict = None,
+            marks: list[dict] = (),
+            content: list = (),  # list[Node]
+        ):
+            self.type = t
+            self.text = text
+            self.attrs = attrs or {}
+            self.marks = marks
+            self.content = content
+
+    def __init__(self):
+        self.document = {"version": 1, "type": "doc", "content": []}
+
+    def node(self, parent=None, **kwargs):
+        parent = parent or self.document
+        node = self.Node(**kwargs)
+        parent.content.append(node)
+        return node
+
+    def normalize(self, node=None):
+        node = node or self.document
+        if not node.content:
+            return {node.__dict__}
+        else:
+            return {
+                **node.__dict__,
+                "content": [self.normalize(content) for content in node.content],
+            }
 
 
 class JiraSvc(ProxyJIRA):
