@@ -276,10 +276,10 @@ class IssueSvc:
 
         templates_path = os.path.join(os.path.dirname(pkg), "templates", "messages")
         loader = jinja2.FileSystemLoader(searchpath=templates_path)
-        env = jinja2.Environment(
+        environ = jinja2.Environment(
             loader=loader,
             autoescape=jinja2.select_autoescape(),
             trim_blocks=True,
             lstrip_blocks=True,
         )
-        return env.get_template(template).render(**values)
+        return environ.get_template(template).render(**values)
