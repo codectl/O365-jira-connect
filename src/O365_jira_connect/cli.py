@@ -77,7 +77,7 @@ def o365_options(f):
     )(f)
     f = click.option(
         "--grant-type",
-        required=False,
+        required=True,
         type=click.Choice(["credentials", "authorization"]),
         default="credentials",
         show_default=True,
@@ -107,7 +107,7 @@ def o365_options(f):
     )(f)
     f = click.option(
         "--protocol",
-        required=False,
+        required=True,
         type=click.Choice(["graph", "office"]),
         default="graph",
         show_default=True,
@@ -117,6 +117,14 @@ def o365_options(f):
 
 
 def jira_options(f):
+    f = click.option(
+        "--project",
+        required=True,
+        type=str,
+        envvar="JIRA_PROJECT_KEY",
+        show_envvar=True,
+        help="the project key to add the issue to",
+    )(f)
     f = click.option(
         "--issue-type",
         required=True,
@@ -155,7 +163,7 @@ def messages(**_):
 
 @click.option(
     "--keep-alive-interval",
-    required=False,
+    required=True,
     type=int,
     default=300,
     envvar="KEEP_ALIVE_INTERVAL_IN_SECONDS",
@@ -164,7 +172,7 @@ def messages(**_):
 )
 @click.option(
     "--connection-timeout",
-    required=False,
+    required=True,
     type=int,
     default=120,
     envvar="CONNECTION_TIMEOUT_IN_MINUTES",
