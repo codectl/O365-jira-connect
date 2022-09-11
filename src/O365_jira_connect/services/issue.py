@@ -1,15 +1,13 @@
 import datetime
 import logging
-import os
 import typing
 
-import jinja2
 import O365
 
-from O365_jira_connect import __file__ as pkg
 from O365_jira_connect.env import env
 from O365_jira_connect.models import Issue
 from O365_jira_connect.session import with_session
+from O365_jira_connect.templates.adf import TemplateBuilder
 
 __all__ = ("IssueSvc",)
 
@@ -35,9 +33,8 @@ class IssueSvc:
                             are stored in Jira
         :param kwargs: properties of the issue
             title: title of the issue
-            description: body of the issue
+            body: body of the issue in format ADF
             reporter: email of the author's issue
-            board: board key which the issue belongs to
             labels: which labels assign to issue
             priority: severity of the issue
             watchers: user emails to watch for issue changes
@@ -48,15 +45,9 @@ class IssueSvc:
         reporter = self.jira.resolve_email(email=reporter_kw) or reporter_kw
         watchers = [self.jira.resolve_email(email=email) for email in watchers_kw]
 
-        # create issue body with Jira markdown format
-        body = self.create_message_body(
-            template="jira.j2",
-            values={
-                "author": self.jira.markdown.mention(user=reporter),
-                "cc": " ".join(self.jira.markdown.mention(user=w) for w in watchers),
-                "body": kwargs["body"],
-            },
-        )
+        builder = TemplateBuilder()
+        body_kw = kwargs["body"]
+        body = builder.jira_issue_body(author=reporter, cc=watchers, body=body_kw)
 
         # if reporter is not a Jira account, reporter is set to 'Anonymous'
         reporter_id = getattr(reporter, "accountId", None)
@@ -243,16 +234,9 @@ class IssueSvc:
         # translate watchers into jira.User objects iff exists
         watchers = [self.jira.resolve_email(email=email) for email in watchers or []]
 
-        body = self.create_message_body(
-            template="jira.j2",
-            values={
-                "author": self.jira.markdown.mention(user=author),
-                "cc": " ".join(
-                    self.jira.markdown.mention(user=watcher) for watcher in watchers
-                ),
-                "body": body,
-            },
-        )
+        builder = TemplateBuilder()
+        body = builder.jira_issue_body(author=author, cc=watchers, body=body)
+
         self.jira.add_comment(issue=issue, body=body, is_internal=True)
 
         # add watchers
@@ -261,25 +245,3 @@ class IssueSvc:
         # adding attachments
         for attachment in attachments or []:
             self.jira.add_attachment(issue=issue, attachment=attachment)
-
-    @staticmethod
-    def create_message_body(template=None, values=None) -> typing.Optional[str]:
-        """Create the body of the ticket.
-
-        :param template: the template to build ticket body from
-        :param values: values for template interpolation
-        """
-        if not template:
-            return None
-        elif not template.endswith(".j2"):
-            template = f"{template}.j2"
-
-        templates_path = os.path.join(os.path.dirname(pkg), "templates", "messages")
-        loader = jinja2.FileSystemLoader(searchpath=templates_path)
-        environ = jinja2.Environment(
-            loader=loader,
-            autoescape=jinja2.select_autoescape(),
-            trim_blocks=True,
-            lstrip_blocks=True,
-        )
-        return environ.get_template(template).render(**values)
