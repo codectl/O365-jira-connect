@@ -12,7 +12,7 @@ from jira import JIRA
 from O365_jira_connect.env import env
 from O365_jira_connect.models import Issue
 
-__all__ = ("AtlassianDF", "AtlassianMarkdown", "JiraSvc")
+__all__ = ("JiraSvc",)
 
 logger = logging.getLogger(__name__)
 
@@ -111,10 +111,6 @@ class ProxyJIRA(JIRA):
 
         return jql
 
-    @property
-    def markdown(self):
-        return AtlassianMarkdown()
-
 
 class JiraSvc(ProxyJIRA):
     """Service to handle Jira operations."""
@@ -192,54 +188,3 @@ class JiraSvc(ProxyJIRA):
         """Translation given email into Jira user."""
         users = self.search_users(query=email, maxResults=1) if email else []
         return next(iter(users), email)
-
-
-class AtlassianMarkdown:
-    @staticmethod
-    def mention(user):
-        """Create Jira markdown mention out of a user.
-        If user does not exist, use given email.
-        """
-        if isinstance(user, jira.User):
-            return f"[~accountid:{user.accountId}]"
-        elif isinstance(user, str):
-            return f"[{user};|mailto:{user}]"
-        else:
-            return None
-
-
-class AtlassianDF:
-    """Atlassian Document Format.
-    see https://bit.ly/3eJhy3G for documentation
-    """
-
-    class Node:
-        def __init__(self, t: str, content: list = (), **kwargs):
-            self.type = t
-            self.content = content or []
-            for kw in kwargs:
-                setattr(self, kw, kwargs[kw])
-
-        def node(self, **kwargs):
-            node = self.__class__(**kwargs)
-            self.content.append(node)
-            return node
-
-        def __str__(self):
-            return f"<Node '{self.type}'>"
-
-    def __init__(self):
-        self.doc = self.Node(version=1, t="doc", content=[])
-
-    def node(self, **kwargs):
-        return self.doc.node(**kwargs)
-
-    def normalize(self, _node=None):
-        node = _node or self.doc
-        if not node.content:
-            return {k: v for k, v in node.__dict__.items() if v}
-        else:
-            return {
-                **node.__dict__,
-                "content": [self.normalize(content) for content in node.content],
-            }
