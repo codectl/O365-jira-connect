@@ -45,9 +45,9 @@ class IssueSvc:
         reporter = self.jira.resolve_email(email=reporter_kw) or reporter_kw
         watchers = [self.jira.resolve_email(email=email) for email in watchers_kw]
 
-        builder = TemplateBuilder()
-        body_kw = kwargs["body"]
-        body = builder.jira_issue_body(author=reporter, cc=watchers, body=body_kw)
+        body = TemplateBuilder.jira_issue_body_template(
+            author=reporter, cc=watchers, body=kwargs["body"]
+        )
 
         # if reporter is not a Jira account, reporter is set to 'Anonymous'
         reporter_id = getattr(reporter, "accountId", None)
@@ -235,7 +235,7 @@ class IssueSvc:
         watchers = [self.jira.resolve_email(email=email) for email in watchers or []]
 
         builder = TemplateBuilder()
-        body = builder.jira_issue_body(author=author, cc=watchers, body=body)
+        body = builder.jira_issue_body_template(author=author, cc=watchers, body=body)
 
         self.jira.add_comment(issue=issue, body=body, is_internal=True)
 
