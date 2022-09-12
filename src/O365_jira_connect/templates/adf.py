@@ -32,30 +32,38 @@ class TemplateBuilder:
         return self.env.get_template(template).render(**values)
 
     @classmethod
-    def jira_issue_body(cls, author, cc=(), body=None):
-        doc = pyadf.Document().paragraph().text("From: ")
-        doc = cls._resolve_mention(doc, user=author).hardbreak()
+    def jira_issue_body_template(cls, author, cc=(), body=None):
+        doc = pyadf.Document()
+        doc = doc.paragraph().text("From: ")
+        doc = cls._resolve_mention(doc, user=author)
         if cc:
+            doc.hardbreak()
             doc = doc.text("Cc: ")
-            for user in cc:
+            for i, user in enumerate(cc, start=1):
                 doc = cls._resolve_mention(doc, user=user)
+                if i < len(cc):
+                    doc = doc.text(text=", ")
         doc = doc.end()
-        doc.paragraph().text(body)
-        return doc.to_doc()
+        doc.paragraph().text(body).end()
+        return doc.to_doc()["body"]
 
-    def outlook_message_reply_body(self, **values):
+    def outlook_message_notification_template(self, **values):
+        return self.wrap_text(text=self.render("notification", **values))
+
+    def outlook_message_reply_template(self, **values):
         return self.wrap_text(text=self.render("reply", **values))
 
     @staticmethod
     def wrap_text(text):
-        return pyadf.Document().paragraph().text(text).to_doc()
+        return pyadf.Document().paragraph().text(text).end().to_doc()["body"]
 
     @staticmethod
     def _resolve_mention(node: pyadf.Paragraph, user) -> pyadf.Paragraph:
         if isinstance(user, jira.User):
-            return node.mention(mention_id=user.accountId,
-                                mention_text=user.displayName)
+            return node.mention(
+                mention_id=user.accountId, mention_text=user.displayName
+            )
         elif isinstance(user, str):
-            return node.link(href=user)
+            return node.text(user).link(href=f"mailto:{user}")
         else:
             return node
