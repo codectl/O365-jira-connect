@@ -15,7 +15,7 @@ class TestTemplateBuilder:
         doc = builder.jira_issue_body_template(
             author="me@example.com",
             cc=["him@example.com", "her@example.com"],
-            body="some short message body"
+            body="some short message body",
         )
         paragraph1 = doc["content"][0]["content"]
         paragraph2 = doc["content"][1]["content"]
