@@ -33,18 +33,21 @@ mistune = "^2.0.4"
 O365 = "^2.0.20"
 O365-notifications = "^0.1.1"
 pyadf = "^0.2.29"
+pydantic = "^1.10.2"
+pydantic-argparse = "^0.5.0"
+pydantic-cli = "^4.3.0"
 python = "^3.9"
 SQLAlchemy = "^1.4.40"
 
 [tool.poetry.dev-dependencies]
-coverage = "^6.4.4"
-pre-commit = "^2.20.0"
-pytest = "^7.1.2"
+coverage = "^7.0.5"
+pre-commit = "^2.21.0"
+pytest = "^7.2.1"
+pytest-mock = "^3.10.0"
 requests-mock = "^1.10.0"
-pytest-mock = "^3.8.2"
 
 [tool.poetry.scripts]
-O365-connect = "O365_jira_connect:cli"
+O365-connect = "O365_jira_connect:entrypoint"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
