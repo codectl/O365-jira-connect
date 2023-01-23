@@ -46,7 +46,7 @@ Install the package directly from ``PyPI`` (recommended):
     $ pip install -U O365-jira-connect
 
 Configuration 📄
--------------
+----------------
 Since the project can read properties from the environment, one can use an ``.env``
 file for application configurations. These should be set accordingly for a correct
 service usage.
@@ -120,7 +120,7 @@ code*. Simply paste that response link back to the terminal, and the service han
 the rest.
 
 Run 🚀
-====
+======
 To start listening for incoming events, it would go like this:
 
 .. code-block:: bash
@@ -165,7 +165,7 @@ for more information on a command. Take the example below:
     >   --help           Show this message and exit.
 
 Tests & linting 🚥
-===============
+==================
 Run tests with ``tox``:
 
 .. code-block:: bash
